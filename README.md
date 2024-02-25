@@ -1,14 +1,35 @@
 Golang Snippets
 
-- Kite order placement
+Test command
 
-  Test by running
+```
+go test -v
+```
+
+Creds
+
+```
+var kite = &Kite{
+	BaseUrl:  "https://api.kite.trade",
+	Id:       "<USER_ID>",
+	Password: "<PASSWORD>",
+	Totp:     "<TOTP>",
+}
+```
+
+- Kite login
 
   ```
-  go test -v
+  err := kite.Login(&ctx)
   ```
 
-  Example order
+- Kite Get Mid Price ( Between Offer an Bid )
+
+  ```
+  price, err := kite.GetMidPrice(&ctx, "NSE", "ZOMATO")
+  ```
+
+- Kite Order Placement
 
   ```
   resp, err := kite.PlaceOrder(&ctx, &Order{

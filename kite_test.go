@@ -1,4 +1,4 @@
-package main
+package kite
 
 import (
 	"context"
@@ -7,12 +7,19 @@ import (
 )
 
 var kite = &Kite{
-	BaseUrl: "https://api.kite.trade",
-	Token:   "<ENC_TOKEN>",
+	BaseUrl:  "https://api.kite.trade",
+	Id:       "<USER_ID>",
+	Password: "<PASSWORD>",
+	Totp:     "<TOTP>",
 }
 
-func TestPlaceOrder(t *testing.T) {
+func TestLogin(t *testing.T) {
 	ctx := context.Background()
+	err := kite.Login(&ctx)
+	log.Println(err)
+
+	price, err := kite.GetMidPrice(&ctx, "NSE", "ZOMATO")
+	log.Println(price, err)
 
 	resp, err := kite.PlaceOrder(&ctx, &Order{
 		Exchange:                   "NSE",
