@@ -8,7 +8,7 @@ import (
 
 var kite = &Kite{
 	BaseUrl: "https://api.kite.trade",
-	Token:   "enctoken pwo1a+V/zxPkxmssyADyp8RCe/Ws0Bl8hVBWZsADFnPt7yaC/1YV2sBjFC4YY+qR8mgkL8gO2q0lmOFlxPDrY4gAngJplM3HEpBvp3JbNz823U+wrCCaOQ==",
+	Token:   "<ENC_TOKEN>",
 }
 
 func TestPlaceOrder(t *testing.T) {
