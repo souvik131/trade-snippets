@@ -47,7 +47,6 @@ func (kite *Kite) Login(ctx *context.Context) error {
 	if err != nil {
 		return err
 	}
-	k.RequestId = respLogin.Data.RequestId
 	payload = fmt.Sprintf("user_id=%v&request_id=%v&twofa_value=%v", id, respLogin.Data.RequestId, otp)
 
 	body, _, cookie, err = PostWithCookies(ctx, urlTFA, payload, headers)
@@ -61,14 +60,19 @@ func (kite *Kite) Login(ctx *context.Context) error {
 	}
 	if respTFA.Status == "success" {
 		encToken := ""
+		publicToken := ""
 		allCookies := strings.Split(cookie, ";")
 		for _, c := range allCookies {
 			c = strings.TrimSpace(c)
 			if strings.HasPrefix(c, "enctoken=") {
 				encToken = fmt.Sprintf("enctoken %v", strings.ReplaceAll(c, "enctoken=", ""))
 			}
+			if strings.HasPrefix(c, "public_token=") {
+				publicToken = strings.ReplaceAll(c, "public_token=", "")
+			}
 		}
 		k.Token = encToken
+		k.PublicToken = publicToken
 		*kite = k
 		return nil
 	}

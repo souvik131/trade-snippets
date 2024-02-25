@@ -1,12 +1,12 @@
 package kite
 
 type Kite struct {
-	Token     string
-	RequestId string
-	BaseUrl   string
-	Id        string
-	Password  string
-	Totp      string
+	Token       string
+	PublicToken string
+	BaseUrl     string
+	Id          string
+	Password    string
+	Totp        string
 }
 
 type Order struct {
