@@ -18,11 +18,13 @@ func Get(ctx *context.Context, urlLink string, headers map[string]string) ([]byt
 	if err := fasthttp.Do(req, resp); err != nil {
 		return nil, 0, err
 	}
-	fasthttp.ReleaseRequest(req)
+	defer fasthttp.ReleaseRequest(req)
 	defer fasthttp.ReleaseResponse(resp)
 	body := resp.Body()
 	code := resp.StatusCode()
-	return body, code, nil
+	var copiedBody []byte
+	copy(copiedBody, body)
+	return copiedBody, code, nil
 }
 
 func Post(ctx *context.Context, urlLink string, payload string, headers map[string]string) ([]byte, int, error) {
@@ -37,11 +39,13 @@ func Post(ctx *context.Context, urlLink string, payload string, headers map[stri
 	if err := fasthttp.Do(req, resp); err != nil {
 		return nil, 0, err
 	}
-	fasthttp.ReleaseRequest(req)
+	defer fasthttp.ReleaseRequest(req)
 	defer fasthttp.ReleaseResponse(resp)
 	body := resp.Body()
 	code := resp.StatusCode()
-	return body, code, nil
+	var copiedBody []byte
+	copy(copiedBody, body)
+	return copiedBody, code, nil
 }
 
 func PostWithCookies(ctx *context.Context, urlLink string, payload string, headers map[string]string) ([]byte, int, string, error) {
@@ -56,7 +60,7 @@ func PostWithCookies(ctx *context.Context, urlLink string, payload string, heade
 	if err := fasthttp.Do(req, resp); err != nil {
 		return nil, 0, "", err
 	}
-	fasthttp.ReleaseRequest(req)
+	defer fasthttp.ReleaseRequest(req)
 	defer fasthttp.ReleaseResponse(resp)
 	body := resp.Body()
 	code := resp.StatusCode()
@@ -64,5 +68,7 @@ func PostWithCookies(ctx *context.Context, urlLink string, payload string, heade
 	resp.Header.VisitAllCookie(func(key, value []byte) {
 		cookieStrings = append(cookieStrings, fmt.Sprintf("%v=%v", string(key), string(value)))
 	})
-	return body, code, strings.Join(cookieStrings, "; "), nil
+	var copiedBody []byte
+	copy(copiedBody, body)
+	return copiedBody, code, strings.Join(cookieStrings, "; "), nil
 }
