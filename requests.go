@@ -22,9 +22,7 @@ func Get(ctx *context.Context, urlLink string, headers map[string]string) ([]byt
 	defer fasthttp.ReleaseResponse(resp)
 	body := resp.Body()
 	code := resp.StatusCode()
-	var copiedBody []byte
-	copy(copiedBody, body)
-	return copiedBody, code, nil
+	return []byte(string(body)), code, nil
 }
 
 func Post(ctx *context.Context, urlLink string, payload string, headers map[string]string) ([]byte, int, error) {
@@ -43,9 +41,7 @@ func Post(ctx *context.Context, urlLink string, payload string, headers map[stri
 	defer fasthttp.ReleaseResponse(resp)
 	body := resp.Body()
 	code := resp.StatusCode()
-	var copiedBody []byte
-	copy(copiedBody, body)
-	return copiedBody, code, nil
+	return []byte(string(body)), code, nil
 }
 
 func PostWithCookies(ctx *context.Context, urlLink string, payload string, headers map[string]string) ([]byte, int, string, error) {
@@ -68,7 +64,5 @@ func PostWithCookies(ctx *context.Context, urlLink string, payload string, heade
 	resp.Header.VisitAllCookie(func(key, value []byte) {
 		cookieStrings = append(cookieStrings, fmt.Sprintf("%v=%v", string(key), string(value)))
 	})
-	var copiedBody []byte
-	copy(copiedBody, body)
-	return copiedBody, code, strings.Join(cookieStrings, "; "), nil
+	return []byte(string(body)), code, strings.Join(cookieStrings, "; "), nil
 }
