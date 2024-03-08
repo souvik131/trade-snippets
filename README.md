@@ -13,7 +13,7 @@ var kite = &Kite{
 	BaseUrl:  "https://api.kite.trade",
 	Id:       "<USER_ID>",
 	Password: "<PASSWORD>",
-	Totp:     "<TOTP>",
+	Totp:     "<TOTP_KEY>",
 }
 ```
 
@@ -21,6 +21,42 @@ var kite = &Kite{
 
   ```
   err := kite.Login(&ctx)
+  ```
+
+- Kite Get Pnl
+
+  ```
+  pnl, err := kite.GetPnl(&ctx)
+  ```
+
+- Kite Get Charges
+
+  ```
+  charges, err := kite.GetCharges(&ctx)
+  ```
+
+- Kite Get Margin
+
+  ```
+  margin, err := kite.GetMargin(&ctx)
+  ```
+
+- Kite Get Positions
+
+  ```
+  positions, err := kite.GetPositions(&ctx)
+  ```
+
+- Kite Get Orders
+
+  ```
+  orders, err := kite.GetOrders(&ctx)
+  ```
+
+- Kite Get Last Price
+
+  ```
+  price, err := kite.GetLastPrice(&ctx, "NSE", "ZOMATO")
   ```
 
 - Kite Get Mid Price ( Between Offer an Bid )
