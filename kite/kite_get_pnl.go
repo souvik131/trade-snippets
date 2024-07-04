@@ -6,18 +6,20 @@ import (
 	"errors"
 	"log"
 	"math"
+
+	"github.com/souvik131/trade-snippets/requests"
 )
 
 func (kite *Kite) GetPnl(ctx *context.Context) (float64, error) {
 
 	k := *kite
-	url := k.BaseUrl + "/portfolio/positions"
+	url := "https://api.kite.trade/portfolio/positions"
 
 	headers := make(map[string]string)
 	headers["authorization"] = k.Token
 	headers["content-type"] = "application/x-www-form-urlencoded"
 
-	res, code, err := Get(ctx, url, headers)
+	res, code, err := requests.Get(ctx, url, headers)
 
 	if err != nil {
 		return 0, err

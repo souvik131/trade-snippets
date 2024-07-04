@@ -5,18 +5,20 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+
+	"github.com/souvik131/trade-snippets/requests"
 )
 
 func (kite *Kite) GetPositions(ctx *context.Context) ([]*Position, error) {
 
 	k := *kite
-	url := k.BaseUrl + "/portfolio/positions"
+	url := "https://api.kite.trade/portfolio/positions"
 
 	headers := make(map[string]string)
 	headers["authorization"] = k.Token
 	headers["content-type"] = "application/x-www-form-urlencoded"
 
-	res, code, err := Get(ctx, url, headers)
+	res, code, err := requests.Get(ctx, url, headers)
 
 	if err != nil {
 		return nil, err

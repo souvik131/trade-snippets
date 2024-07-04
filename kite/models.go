@@ -1,12 +1,16 @@
 package kite
 
 type Kite struct {
-	Token       string
-	PublicToken string
-	BaseUrl     string
-	Id          string
-	Password    string
-	Totp        string
+	Token        string
+	PublicToken  string
+	Id           string
+	Password     string
+	Totp         string
+	ApiKey       string
+	ApiSecret    string
+	RequestToken string
+	AccessToken  string
+	Path         string
 }
 
 type Margin struct {

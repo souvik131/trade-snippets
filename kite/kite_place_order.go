@@ -9,6 +9,8 @@ import (
 	"math"
 	"reflect"
 	"strings"
+
+	"github.com/souvik131/trade-snippets/requests"
 )
 
 func (kite *Kite) PlaceOrder(ctx *context.Context, order *Order) (string, error) {
@@ -63,7 +65,7 @@ func (kite *Kite) PlaceOrder(ctx *context.Context, order *Order) (string, error)
 
 	log.Printf("Placing the following order : %+v", kOrder)
 
-	url := k.BaseUrl + "/orders/" + kOrder.Variety
+	url := "https://api.kite.trade/orders/" + kOrder.Variety
 	queries := make([]string, 0)
 	typ := reflect.TypeOf(*kOrder)
 	val := reflect.ValueOf(kOrder).Elem()
@@ -78,7 +80,7 @@ func (kite *Kite) PlaceOrder(ctx *context.Context, order *Order) (string, error)
 	headers["authorization"] = k.Token
 	headers["content-type"] = "application/x-www-form-urlencoded"
 
-	response, code, err := Post(ctx, url, payload, headers)
+	response, code, err := requests.Post(ctx, url, payload, headers)
 
 	if err != nil {
 		return "", err

@@ -4,17 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+
+	"github.com/souvik131/trade-snippets/requests"
 )
 
 func (kiteClient *Kite) GetMargin(ctx *context.Context) (*Margin, error) {
 	k := *kiteClient
-	url := k.BaseUrl + "/user/margins"
+	url := "https://api.kite.trade/user/margins"
 
 	headers := make(map[string]string)
 	headers["authorization"] = k.Token
 	headers["content-type"] = "application/x-www-form-urlencoded"
 
-	res, code, err := Get(ctx, url, headers)
+	res, code, err := requests.Get(ctx, url, headers)
 
 	if err != nil {
 		return nil, err

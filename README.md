@@ -1,26 +1,28 @@
 Golang Snippets
 
-Test command
+Run command
 
 ```
-go test -v
+go run .
 ```
 
 Creds
 
 ```
-var kite = &Kite{
-	BaseUrl:  "https://api.kite.trade",
-	Id:       "<USER_ID>",
-	Password: "<PASSWORD>",
-	Totp:     "<TOTP_KEY>",
+var k = &kite.Kite{
+ 	Id:        "<ID>",
+ 	Password:  "<PASSWORD>",
+ 	Totp:      "<TOTP>",
+ 	ApiKey:    "<API_KEY>",
+ 	ApiSecret: "<API_SECRET>",
+ 	Path:      "<PATH>", //save http://127.0.0.1<PATH> in kite.trade
 }
 ```
 
 - Kite login
 
   ```
-  err := kite.Login(&ctx)
+  err := kite.Login(&ctx,router)
   ```
 
 - Kite Get Pnl

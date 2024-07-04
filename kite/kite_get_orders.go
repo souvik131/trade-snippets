@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+
+	"github.com/souvik131/trade-snippets/requests"
 )
 
 func (kite *Kite) GetOrders(ctx *context.Context) ([]*OrderStatus, error) {
 
 	k := *kite
-	url := k.BaseUrl + "/orders"
+	url := "https://api.kite.trade/orders"
 
 	// log.Println(url, k["token"])
 
@@ -17,7 +19,7 @@ func (kite *Kite) GetOrders(ctx *context.Context) ([]*OrderStatus, error) {
 	headers["authorization"] = k.Token
 	headers["content-type"] = "application/x-www-form-urlencoded"
 
-	res, code, err := Get(ctx, url, headers)
+	res, code, err := requests.Get(ctx, url, headers)
 	if err != nil {
 		return nil, err
 	}
