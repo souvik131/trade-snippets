@@ -7,6 +7,9 @@ cp mac build/;
 cp win.exe build/;
 cp linux build/;
 cp creds.txt build/;
+rm mac
+rm linux
+rm win.exe
 rm build.zip
 zip -r build.zip build;
 
