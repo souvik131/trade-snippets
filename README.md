@@ -1,23 +1,37 @@
-Golang Snippets
+Golang Kite CLI
 
-Run command
+Download and Unzip build.zip
 
-```
-go run .
-```
-
-Creds
+Set Kite Creds
 
 ```
-var k = &kite.Kite{
- 	Id:        "<ID>",
- 	Password:  "<PASSWORD>",
- 	Totp:      "<TOTP>",
- 	ApiKey:    "<API_KEY>",
- 	ApiSecret: "<API_SECRET>",
- 	Path:      "<PATH>", //save http://127.0.0.1<PATH> in kite.trade
-}
+TA_ID=              //Kite Username
+TA_PASSWORD=        //Kite Password
+TA_TOTP=            //Kite TOTP Secret ( not  OTP )
+TA_APIKEY=          //API key shared in kite.trade
+TA_APISECRET=       //API secret shared in kite.trade
+TA_PATH=            //API path you want to run on. eg /kite, For this path URL in kite.trade set should be http://127.0.0.1/kite
+TA_PORT=80          //Port you want the application to host
+
 ```
+
+For Mac
+
+```
+./mac
+```
+
+For linux
+
+```
+./linux
+```
+
+For windows
+
+Run the win.exe file
+
+Additional Examples in Golang
 
 - Kite login
 
