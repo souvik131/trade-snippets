@@ -12,5 +12,6 @@ rm linux
 rm win.exe
 rm build.zip
 zip -r build.zip build;
+rm -rf build;
 
 
