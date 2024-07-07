@@ -13,7 +13,7 @@ func (kite *Kite) GetMidPrice(ctx *context.Context, exchange string, tradingSymb
 	k := *kite
 	url := "https://api.kite.trade/quote?i=" + exchange + ":" + url.QueryEscape(tradingSymbol)
 	headers := make(map[string]string)
-	headers["authorization"] = k.Token
+	headers["authorization"] = k["Token"]
 	headers["content-type"] = "application/x-www-form-urlencoded"
 
 	response, _, err := requests.Get(ctx, url, headers)

@@ -16,7 +16,7 @@ func (kite *Kite) GetOrders(ctx *context.Context) ([]*OrderStatus, error) {
 	// log.Println(url, k["token"])
 
 	headers := make(map[string]string)
-	headers["authorization"] = k.Token
+	headers["authorization"] = k["Token"]
 	headers["content-type"] = "application/x-www-form-urlencoded"
 
 	res, code, err := requests.Get(ctx, url, headers)

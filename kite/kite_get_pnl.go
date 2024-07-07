@@ -16,7 +16,7 @@ func (kite *Kite) GetPnl(ctx *context.Context) (float64, error) {
 	url := "https://api.kite.trade/portfolio/positions"
 
 	headers := make(map[string]string)
-	headers["authorization"] = k.Token
+	headers["authorization"] = k["Token"]
 	headers["content-type"] = "application/x-www-form-urlencoded"
 
 	res, code, err := requests.Get(ctx, url, headers)

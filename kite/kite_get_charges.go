@@ -14,7 +14,7 @@ func (kiteClient *Kite) GetCharges(ctx *context.Context) (float64, error) {
 	url := "https://api.kite.trade/orders"
 
 	headers := make(map[string]string)
-	headers["authorization"] = k.Token
+	headers["authorization"] = k["Token"]
 	headers["content-type"] = "application/x-www-form-urlencoded"
 
 	res, code, err := requests.Get(ctx, url, headers)
@@ -54,7 +54,7 @@ func (kiteClient *Kite) GetCharges(ctx *context.Context) (float64, error) {
 		}
 		payload := string(bytes)
 		headers := make(map[string]string)
-		headers["authorization"] = k.Token
+		headers["authorization"] = k["Token"]
 		headers["content-type"] = "application/json"
 
 		res, code, err := requests.Post(ctx, url, payload, headers)

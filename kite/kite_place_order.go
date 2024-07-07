@@ -77,7 +77,7 @@ func (kite *Kite) PlaceOrder(ctx *context.Context, order *Order) (string, error)
 	}
 	payload := strings.Join(queries, "&")
 	headers := make(map[string]string)
-	headers["authorization"] = k.Token
+	headers["authorization"] = k["Token"]
 	headers["content-type"] = "application/x-www-form-urlencoded"
 
 	response, code, err := requests.Post(ctx, url, payload, headers)

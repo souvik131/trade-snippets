@@ -13,7 +13,7 @@ func (kiteClient *Kite) GetMargin(ctx *context.Context) (*Margin, error) {
 	url := "https://api.kite.trade/user/margins"
 
 	headers := make(map[string]string)
-	headers["authorization"] = k.Token
+	headers["authorization"] = k["Token"]
 	headers["content-type"] = "application/x-www-form-urlencoded"
 
 	res, code, err := requests.Get(ctx, url, headers)

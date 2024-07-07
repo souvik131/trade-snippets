@@ -16,8 +16,8 @@ import (
 	"github.com/souvik131/trade-snippets/requests"
 )
 
-func (k *Kite) oauth(c *gin.Context) {
-
+func (kiteClient *Kite) oauth(c *gin.Context) {
+	k := *kiteClient
 	queries := c.Request.URL.Query()
 	requestToken, idExists := queries["request_token"]
 	if !idExists {
@@ -25,7 +25,7 @@ func (k *Kite) oauth(c *gin.Context) {
 		return
 	}
 
-	k.RequestToken = requestToken[0]
+	k["RequestToken"] = requestToken[0]
 	ctx := context.WithoutCancel(c)
 	headers := map[string]string{
 		"Connection":      "keep-alive",
@@ -37,7 +37,7 @@ func (k *Kite) oauth(c *gin.Context) {
 		"x-kite-version":  "3",
 	}
 
-	payload := fmt.Sprintf("api_key=%v&request_token=%v&checksum=%v", k.ApiKey, k.RequestToken, GetSha256(k.ApiKey+k.RequestToken+k.ApiSecret))
+	payload := fmt.Sprintf("api_key=%v&request_token=%v&checksum=%v", k["ApiKey"], k["RequestToken"], GetSha256(k["ApiKey"]+k["RequestToken"]+k["ApiSecret"]))
 	body, code, _, err := requests.PostWithCookies(&ctx, "https://api.kite.trade/session/token", payload, headers, "")
 	if err != nil {
 		log.Println(err)
@@ -68,24 +68,25 @@ func (k *Kite) oauth(c *gin.Context) {
 		c.Data(http.StatusFailedDependency, "text/plain; charset=utf-8", []byte("failed"))
 		return
 	}
-	k.AccessToken = respLogin.Data.AccessToken
-	k.Token = fmt.Sprintf("token %v:%v", k.ApiKey, respLogin.Data.AccessToken)
-	log.Println("Stage 7: OAuth Complete ", k.Token)
+	k["AccessToken"] = respLogin.Data.AccessToken
+	k["Token"] = fmt.Sprintf("token %v:%v", k["ApiKey"], respLogin.Data.AccessToken)
+	//log.Println("Stage 7: OAuth Complete ", k["Token"])
 	c.Data(http.StatusOK, "text/plain; charset=utf-8", []byte("ok"))
 
 }
 
-func (k *Kite) Login(ctx *context.Context, router *gin.Engine) error {
+func (kiteClient *Kite) Login(ctx *context.Context, router *gin.Engine) error {
 
+	k := *kiteClient
 	present := false
 	for _, route := range router.Routes() {
-		if route.Path == k.Path {
+		if route.Path == k["Path"] {
 			present = true
 		}
 	}
 	if !present {
-		log.Println("Stage 0: Router set to ", k.Path)
-		router.GET(k.Path, k.oauth)
+		//	log.Println("Stage 0: Router set to ", k["Path"])
+		router.GET(k["Path"], k.oauth)
 	}
 	type LoginPayload struct {
 		Status    string `json:"error"`
@@ -109,7 +110,7 @@ func (k *Kite) Login(ctx *context.Context, router *gin.Engine) error {
 	}
 
 	//Session ID request
-	body, code, cookie, err := requests.GetWithCookies(ctx, "https://kite.zerodha.com/connect/login?v=3&api_key="+k.ApiKey, headers, "")
+	body, code, cookie, err := requests.GetWithCookies(ctx, "https://kite.zerodha.com/connect/login?v=3&api_key="+k["ApiKey"], headers, "")
 	if code != 302 {
 		return fmt.Errorf("no_redirect %v", code)
 	}
@@ -125,32 +126,32 @@ func (k *Kite) Login(ctx *context.Context, router *gin.Engine) error {
 			break
 		}
 	}
-	log.Println("Stage 1: Got Session Id ")
+	//log.Println("Stage 1: Got Session Id ")
 
 	//Open Login URL
-	_, code, cookie, err = requests.GetWithCookies(ctx, "https://kite.zerodha.com/connect/login?sess_id="+sessionId+"&api_key="+k.ApiKey, headers, cookie)
+	_, code, cookie, err = requests.GetWithCookies(ctx, "https://kite.zerodha.com/connect/login?sess_id="+sessionId+"&api_key="+k["ApiKey"], headers, cookie)
 	if err != nil {
 		return err
 	}
 	if code != 200 {
 		return fmt.Errorf("failed %v", code)
 	}
-	log.Println("Stage 2: Opened Login URL")
+	//log.Println("Stage 2: Opened Login URL")
 
 	//Hit Session API
-	_, code, cookie, err = requests.GetWithCookies(ctx, "https://kite.zerodha.com/api/connect/session?sess_id="+sessionId+"&api_key="+k.ApiKey, headers, cookie)
+	_, code, cookie, err = requests.GetWithCookies(ctx, "https://kite.zerodha.com/api/connect/session?sess_id="+sessionId+"&api_key="+k["ApiKey"], headers, cookie)
 	if err != nil {
 		return err
 	}
 	if code != 200 {
 		return fmt.Errorf("failed %v", code)
 	}
-	log.Println("Stage 3: Hit Session API")
+	//log.Println("Stage 3: Hit Session API")
 
 	//Hit Login API
 	headers["Content-Type"] = "application/x-www-form-urlencoded"
 	headers["x-kite-version"] = "3"
-	payload := fmt.Sprintf("user_id=%v&password=%v", k.Id, k.Password)
+	payload := fmt.Sprintf("user_id=%v&password=%v", k["Id"], k["Password"])
 	body, code, cookie, err = requests.PostWithCookies(ctx, "https://kite.zerodha.com/api/login", payload, headers, cookie)
 	if err != nil {
 		return err
@@ -167,14 +168,14 @@ func (k *Kite) Login(ctx *context.Context, router *gin.Engine) error {
 
 		return fmt.Errorf("no_request_id")
 	}
-	log.Println("Stage 4: Hit Login API ")
+	//log.Println("Stage 4: Hit Login API ")
 
 	//Hit TOTP API
-	otp, err := hotp.GenerateCode(k.Totp, uint64(time.Now().Unix()/30))
+	otp, err := hotp.GenerateCode(k["Totp"], uint64(time.Now().Unix()/30))
 	if err != nil {
 		return err
 	}
-	payload = fmt.Sprintf("user_id=%v&request_id=%v&twofa_value=%v&twofa_type=totp&skip_session=true", k.Id, respLogin.Data.RequestId, otp)
+	payload = fmt.Sprintf("user_id=%v&request_id=%v&twofa_value=%v&twofa_type=totp&skip_session=true", k["Id"], respLogin.Data.RequestId, otp)
 	body, code, cookie, err = requests.PostWithCookies(ctx, "https://kite.zerodha.com/api/twofa", payload, headers, cookie)
 
 	if err != nil {
@@ -188,7 +189,7 @@ func (k *Kite) Login(ctx *context.Context, router *gin.Engine) error {
 	if err != nil {
 		return err
 	}
-	log.Println("Stage 5: Hit TOTP API ")
+	//log.Println("Stage 5: Hit TOTP API ")
 	headers = map[string]string{
 		"Connection":      "keep-alive",
 		"User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
@@ -196,7 +197,7 @@ func (k *Kite) Login(ctx *context.Context, router *gin.Engine) error {
 		"Host":            "kite.zerodha.com",
 		"Accept":          "*/*",
 	}
-	body, code, _, err = requests.GetWithCookies(ctx, "https://kite.zerodha.com/connect/finish?api_key="+k.ApiKey+"&sess_id="+sessionId, headers, cookie)
+	body, code, _, err = requests.GetWithCookies(ctx, "https://kite.zerodha.com/connect/finish?api_key="+k["ApiKey"]+"&sess_id="+sessionId, headers, cookie)
 	if err != nil {
 		return err
 	}
@@ -205,7 +206,7 @@ func (k *Kite) Login(ctx *context.Context, router *gin.Engine) error {
 	}
 	redirectUrl = string(body)
 
-	log.Println("Stage 6: Get Redirect URL ", redirectUrl)
+	//log.Println("Stage 6: Get Redirect URL ", redirectUrl)
 	_, code, _, err = requests.GetWithCookies(ctx, redirectUrl, headers, "")
 	if err != nil {
 		return err
@@ -213,7 +214,7 @@ func (k *Kite) Login(ctx *context.Context, router *gin.Engine) error {
 	if code != 200 {
 		return fmt.Errorf("failed %v", code)
 	}
-	log.Println("Stage 8: Login Complete ")
+	//log.Println("Stage 8: Login Complete ")
 	return nil
 }
 func GetOtp(totp string) (string, error) {
