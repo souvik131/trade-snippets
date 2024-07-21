@@ -2,117 +2,45 @@ package main
 
 import (
 	"context"
-	"log"
-	"os"
-	"strings"
+	"fmt"
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 	"github.com/souvik131/trade-snippets/kite"
 )
 
-var k = &kite.Kite{}
-var inputs = []string{"Id", "Password", "Totp", "ApiKey", "ApiSecret", "Path"}
-
 func main() {
 
-	err := godotenv.Load("creds.txt")
-	if err != nil {
-		log.Fatalf("Error loading creds.txt file: %s", err)
-	}
-	for _, input := range inputs {
-		val := strings.TrimSpace(os.Getenv("TA_" + strings.ToUpper(input)))
-		if val == "" {
-			log.Fatalln("Please ensure creds.txt file has all the creds including ", "TA_"+strings.ToUpper(input))
-		}
-		(*k)[input] = val
-	}
-
-	port := strings.TrimSpace(os.Getenv("TA_PORT"))
-
-	portString := ""
-	if port != "80" {
-		portString = ":" + port
-	}
-	color.Yellow("Ensure that the URL set in kite.trade is http://127.0.0.1" + portString + (*k)["Path"])
-	gin.SetMode(gin.ReleaseMode)
-	router := gin.New()
-	router.Use(gin.Recovery())
-	go func() {
-		router.Run("0.0.0.0:" + port)
-	}()
-	time.Sleep(1 * time.Second)
+	start := time.Now()
+	var k = &kite.Kite{}
 	ctx := context.Background()
-	err = k.Login(&ctx, router)
+	err := k.Login(&ctx)
 	if err != nil {
-		log.Fatalln(err)
+		color.Red(fmt.Sprintf("%s", err))
+		return
 	}
-	color.Green("Request Token : %s", (*k)["RequestToken"])
-	color.Green("Access Token : %s", (*k)["AccessToken"])
 
-	// pnl, err := k.GetPnl(&ctx)
-	// log.Println(pnl, err)
+	color.Green(fmt.Sprintf("Account login took %v seconds", time.Since(start).Seconds()))
 
-	// charges, err := k.GetCharges(&ctx)
-	// log.Println(charges, err)
+	k.TickSymbolMap = map[string]kite.KiteTicker{}
+	go func() {
+		for range k.TickerClient.ConnectChan {
 
-	// margin, err := k.GetMargin(&ctx)
-	// log.Println(margin, err)
-
-	// positions, err := k.GetPositions(&ctx)
-	// for _, pos := range positions {
-	// 	log.Printf("%+v, %v", pos, err)
-	// }
-
-	// orders, err := k.GetOrders(&ctx)
-	// for _, order := range orders {
-	// 	log.Printf("%+v, %v", order, err)
-	// }
-
-	// price, err := k.GetLastPrice(&ctx, "NSE", "ZOMATO")
-	// log.Println(price, err)
-
-	// price, err = k.GetMidPrice(&ctx, "NSE", "ZOMATO")
-	// log.Println(price, err)
-
-	// resp, err := k.PlaceOrder(&ctx, &kite.Order{
-	// 	Exchange:                   "NSE",
-	// 	TradingSymbol:              "ZOMATO",
-	// 	Quantity:                   50,
-	// 	MarketProtectionPercentage: 5,
-	// 	TickSize:                   0.05,
-	// 	TransactionType:            "BUY",
-	// 	Product:                    "CNC",
-	// 	OrderType:                  "MARKET",
-	// })
-	// log.Println(resp, err)
-
-	// resp, err = k.PlaceOrder(&ctx, &kite.Order{
-	// 	Exchange:                   "NSE",
-	// 	TradingSymbol:              "ZOMATO",
-	// 	Price:                      160,
-	// 	Quantity:                   50,
-	// 	MarketProtectionPercentage: 5,
-	// 	TickSize:                   0.05,
-	// 	TransactionType:            "BUY",
-	// 	Product:                    "CNC",
-	// 	OrderType:                  "LIMIT",
-	// })
-	// log.Println(resp, err)
-
-	// resp, err = k.PlaceOrder(&ctx, &kite.Order{
-	// 	Exchange:                   "NSE",
-	// 	TradingSymbol:              "ZOMATO",
-	// 	Price:                      160,
-	// 	Quantity:                   50,
-	// 	MarketProtectionPercentage: 5,
-	// 	TickSize:                   0.05,
-	// 	TransactionType:            "BUY",
-	// 	Product:                    "CNC",
-	// 	OrderType:                  "SL",
-	// })
-	// log.Println(resp, err)
+			color.HiBlue(fmt.Sprintf("Websocket is connected in %v seconds", time.Since(start).Seconds()))
+			color.HiCyan("Subscribing Ticks")
+			start = time.Now()
+			k.TickerClient.SubscribeLTP(&ctx, []string{"NIFTY 50", "TATAMOTORS"})
+			k.TickerClient.SubscribeQuote(&ctx, []string{"INFY"})
+			k.TickerClient.SubscribeFull(&ctx, []string{"ACC"})
+		}
+	}()
+	go func() {
+		for tick := range k.TickerClient.TickerChan {
+			color.HiWhite(fmt.Sprintf("\nTick %v: %+v\n", tick.TradingSymbol, tick))
+			k.TickerClient.Unsubscribe(&ctx, []string{"NIFTY 50", "TATAMOTORS", "INFY"})
+			color.HiCyan(fmt.Sprintf("Received in %v secs", time.Since(start).Seconds()))
+		}
+	}()
+	k.TickerClient.Serve(&ctx)
 
 }

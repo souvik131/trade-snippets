@@ -8,15 +8,22 @@ import (
 	"github.com/souvik131/trade-snippets/requests"
 )
 
-func (kiteClient *Kite) GetMargin(ctx *context.Context) (*Margin, error) {
-	k := *kiteClient
-	url := "https://api.kite.trade/user/margins"
+func (kite *Kite) GetMargin(ctx *context.Context) (*Margin, error) {
+	k := *(*kite).Creds
+	url := k["Url"] + "/user/margins"
 
-	headers := make(map[string]string)
+	headers := map[string]string{
+		"Connection":      "keep-alive",
+		"User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+		"Accept-Encoding": "gzip, deflate",
+		"Host":            "kite.zerodha.com",
+		"Accept":          "*/*",
+	}
 	headers["authorization"] = k["Token"]
 	headers["content-type"] = "application/x-www-form-urlencoded"
 
-	res, code, err := requests.Get(ctx, url, headers)
+	res, code, cookie, err := requests.GetWithCookies(ctx, url, headers, k["Cookie"])
+	k["Cookie"] = cookie
 
 	if err != nil {
 		return nil, err

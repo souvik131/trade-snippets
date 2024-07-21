@@ -1,18 +1,86 @@
 package kite
 
-//	type Kite struct {
-//		Token        string
-//		PublicToken  string
-//		Id           string
-//		Password     string
-//		Totp         string
-//		ApiKey       string
-//		ApiSecret    string
-//		RequestToken string
-//		AccessToken  string
-//		Path         string
-//	}
-type Kite map[string]string
+import (
+	"sync/atomic"
+	"time"
+
+	"github.com/souvik131/trade-snippets/ws"
+)
+
+type Instruments []*Instrument
+
+type InstrumentSymbolMap map[string]*Instrument
+type Instrument struct {
+	Exchange       string  `csv:"exchange"`
+	TradingSymbol  string  `csv:"tradingsymbol"`
+	LotSize        float64 `csv:"lot_size"`
+	Name           string  `csv:"name"`
+	Expiry         string  `csv:"expiry"`
+	InstrumentType string  `csv:"instrument_type"`
+	Segment        string  `csv:"segment"`
+	Strike         float64 `csv:"strike"`
+	TickSize       float64 `csv:"tick_size"`
+	Token          uint32  `csv:"instrument_token"`
+}
+type Message struct {
+	Type string      `json:"type"`
+	Data interface{} `json:"data"`
+}
+
+type Request struct {
+	Message string        `json:"a"`
+	Tokens  []interface{} `json:"v"`
+}
+
+type TickerClient struct {
+	Client                *ws.Client
+	TickerChan            chan KiteTicker
+	ConnectChan           chan struct{}
+	ErrorChan             chan interface{}
+	LastUpdatedTime       atomic.Int64
+	FullTokens            map[uint32]bool
+	QuoteTokens           map[uint32]bool
+	LtpTokens             map[uint32]bool
+	AliveTimeoutInSeconds float64
+}
+type LimitOrder struct {
+	Price    float64
+	Quantity uint32
+	Orders   uint32
+}
+type Depth struct {
+	Buy  []LimitOrder
+	Sell []LimitOrder
+}
+type KiteTicker struct {
+	TradingSymbol       string
+	Token               uint32
+	LastPrice           float64
+	LastTradedQuantity  uint32
+	AverageTradedPrice  float64
+	VolumeTraded        uint32
+	TotalBuy            uint32
+	TotalSell           uint32
+	High                float64
+	Low                 float64
+	Open                float64
+	Close               float64
+	OI                  uint32
+	OIHigh              uint32
+	OILow               uint32
+	PriceChange         float64
+	LastTradedTimestamp time.Time
+	ExchangeTimestamp   time.Time
+	Depth               Depth
+}
+type Creds map[string]string
+type Kite struct {
+	Creds         *Creds
+	TickerClient  *TickerClient
+	TickSymbolMap map[string]KiteTicker
+	Positions     []*Position
+	Pnl           float64
+}
 
 type Margin struct {
 	MarginUsed  float64
@@ -102,22 +170,27 @@ type Position struct {
 	DaySellPrice      float64 `json:"day_sell_price"`
 	DaySellValue      float64 `json:"day_sell_value"`
 }
-
+type OptionPrice struct {
+	Strike float64
+	Price  float64
+	Type   string
+}
+type Quote struct {
+	LastPrice float64 `json:"last_price"`
+	Depth     struct {
+		Buy []struct {
+			Price float64 `json:"price"`
+		} `json:"buy"`
+		Sell []struct {
+			Price float64 `json:"price"`
+		} `json:"sell"`
+	} `json:"depth"`
+}
 type QuoteResponsePayload struct {
-	Status    string `json:"error"`
-	Message   string `json:"message"`
-	ErrorType string `json:"error_type"`
-	Data      *map[string]struct {
-		LastPrice float64 `json:"last_price"`
-		Depth     struct {
-			Buy []struct {
-				Price float64 `json:"price"`
-			} `json:"buy"`
-			Sell []struct {
-				Price float64 `json:"price"`
-			} `json:"sell"`
-		} `json:"depth"`
-	} `json:"data"`
+	Status    string            `json:"error"`
+	Message   string            `json:"message"`
+	ErrorType string            `json:"error_type"`
+	Data      map[string]*Quote `json:"data"`
 }
 type OrderResponsePayload struct {
 	Status    string `json:"error"`
@@ -170,7 +243,11 @@ type BrokerChargesPayload struct {
 	ErrorType string           `json:"error_type"`
 	Data      []*BrokerCharges `json:"data"`
 }
-
+type CancellationPayload struct {
+	Status    string `json:"error"`
+	Message   string `json:"message"`
+	ErrorType string `json:"error_type"`
+}
 type OrdersResponsePayload struct {
 	Status    string         `json:"error"`
 	Message   string         `json:"message"`
@@ -208,4 +285,21 @@ type LoginPayload struct {
 
 type TFAPayload struct {
 	Status string `json:"status"`
+}
+
+type OrderFillConfig struct {
+	TradingSymbol   string
+	Exchange        string
+	InstrumentName  string
+	Strike          float64
+	Expiry          string
+	Spread          float64
+	Type            string
+	Quantity        int64
+	QuotePrice      float64
+	TransactionType string
+	TimeoutInSecs   float64
+	Attempts        int
+	TotalAttempts   int
+	TickSize        float64
 }
