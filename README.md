@@ -23,7 +23,7 @@ go run .
 Run Docker
 
 ```
-sh run.sh
+docker-compose up -d
 ```
 
 Web & API Support
