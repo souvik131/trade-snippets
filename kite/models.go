@@ -33,15 +33,16 @@ type Request struct {
 }
 
 type TickerClient struct {
-	Client                *ws.Client
-	TickerChan            chan KiteTicker
-	ConnectChan           chan struct{}
-	ErrorChan             chan interface{}
-	LastUpdatedTime       atomic.Int64
-	FullTokens            map[uint32]bool
-	QuoteTokens           map[uint32]bool
-	LtpTokens             map[uint32]bool
-	AliveTimeoutInSeconds float64
+	Id                         int
+	Client                     *ws.Client
+	TickerChan                 chan KiteTicker
+	ConnectChan                chan struct{}
+	ErrorChan                  chan interface{}
+	LastUpdatedTime            atomic.Int64
+	FullTokens                 map[uint32]bool
+	QuoteTokens                map[uint32]bool
+	LtpTokens                  map[uint32]bool
+	HeartBeatIntervalInSeconds float64
 }
 type LimitOrder struct {
 	Price    float64
@@ -76,7 +77,7 @@ type KiteTicker struct {
 type Creds map[string]string
 type Kite struct {
 	Creds         *Creds
-	TickerClient  *TickerClient
+	TickerClients []*TickerClient
 	TickSymbolMap map[string]KiteTicker
 	Positions     []*Position
 	Pnl           float64

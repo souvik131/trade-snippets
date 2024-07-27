@@ -15,7 +15,7 @@ import (
 	"github.com/souvik131/trade-snippets/ws"
 )
 
-const AliveTimeoutInSeconds float64 = 5
+const HeartBeatIntervalInSeconds float64 = 6
 
 func GetWebsocketClientForWeb(ctx *context.Context, id string, token string) (*TickerClient, error) {
 
@@ -31,7 +31,7 @@ func GetWebsocketClientForAPI(ctx *context.Context, token string) (*TickerClient
 }
 
 func getWebsocketClient(ctx *context.Context, rawQuery string) (*TickerClient, error) {
-	// log.Printf("websocket : start")
+	log.Printf("websocket : start")
 
 	k := &TickerClient{
 		Client: &ws.Client{
@@ -42,14 +42,16 @@ func getWebsocketClient(ctx *context.Context, rawQuery string) (*TickerClient, e
 			},
 			Header: &http.Header{},
 		},
-		TickerChan:            make(chan KiteTicker, 100),
-		ConnectChan:           make(chan struct{}, 10),
-		ErrorChan:             make(chan interface{}, 100),
-		FullTokens:            map[uint32]bool{},
-		QuoteTokens:           map[uint32]bool{},
-		LtpTokens:             map[uint32]bool{},
-		AliveTimeoutInSeconds: AliveTimeoutInSeconds,
+		TickerChan:                 make(chan KiteTicker, 100),
+		ConnectChan:                make(chan struct{}, 10),
+		ErrorChan:                  make(chan interface{}, 100),
+		FullTokens:                 map[uint32]bool{},
+		QuoteTokens:                map[uint32]bool{},
+		LtpTokens:                  map[uint32]bool{},
+		HeartBeatIntervalInSeconds: HeartBeatIntervalInSeconds,
 	}
+
+	k.LastUpdatedTime.Store(time.Now().Unix())
 	err := k.Connect(ctx)
 	if err != nil {
 		return nil, err
@@ -58,6 +60,7 @@ func getWebsocketClient(ctx *context.Context, rawQuery string) (*TickerClient, e
 }
 
 func (k *TickerClient) Connect(ctx *context.Context) error {
+
 	data, err := k.Client.Connect(ctx)
 	if err != nil {
 		return err
@@ -73,7 +76,7 @@ func (k *TickerClient) Connect(ctx *context.Context) error {
 		}
 		return fmt.Errorf("%v", respBody)
 	}
-	// log.Printf("websocket : client ready")
+	log.Printf("websocket : client ready")
 	err = k.Client.Read(ctx)
 	if err != nil {
 		return err
@@ -84,7 +87,7 @@ func (k *TickerClient) Connect(ctx *context.Context) error {
 func (k *TickerClient) Serve(ctx *context.Context) {
 
 	<-time.After(time.Millisecond)
-	// log.Printf("websocket : serve")
+	log.Println("websocket : serve", k.Id)
 
 	ticker := time.NewTicker(time.Second)
 
@@ -229,13 +232,12 @@ func (k *TickerClient) Unsubscribe(ctx *context.Context, tokens []string) error 
 }
 
 func (k *TickerClient) checkHeartBeat(ctx *context.Context) bool {
-
-	if time.Since(time.Unix(k.LastUpdatedTime.Load(), 0)).Seconds() > float64(k.AliveTimeoutInSeconds) {
-		k.AliveTimeoutInSeconds *= 1.1
+	if time.Since(time.Unix(k.LastUpdatedTime.Load(), 0)).Seconds() > float64(k.HeartBeatIntervalInSeconds) {
+		k.HeartBeatIntervalInSeconds *= 1.1
 		go k.Reconnect(ctx)
 		return false
 	} else {
-		k.AliveTimeoutInSeconds = AliveTimeoutInSeconds
+		k.HeartBeatIntervalInSeconds = HeartBeatIntervalInSeconds
 	}
 	return true
 

@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"sync"
 
-	"github.com/gorilla/websocket"
+	"nhooyr.io/websocket"
 )
 
 type Client struct {
@@ -32,26 +32,30 @@ type Writer struct {
 	Message []byte
 }
 
-const TEXT MessageType = websocket.TextMessage
-const BINARY MessageType = websocket.BinaryMessage
-const CLOSE MessageType = websocket.CloseMessage
-const PING MessageType = websocket.PingMessage
-const PONG MessageType = websocket.PongMessage
+const TEXT MessageType = 1
+const BINARY MessageType = 2
+const CLOSE MessageType = 9
+const PING MessageType = 8
+const PONG MessageType = 10
 
 var initialized = false
 
 func (c *Client) Connect(ctx *context.Context) ([]byte, error) {
-	conn, response, err := websocket.DefaultDialer.DialContext(*ctx, c.URL.String(), *c.Header)
+
+	conn, response, err := websocket.Dial(*ctx, c.URL.String(), &websocket.DialOptions{HTTPHeader: *c.Header})
+	log.Println(c.URL.String(), response.Status)
 	c.ConnMutex.Lock()
 	c.Conn = conn
-	// c.CloseSignalChannel = make(chan struct{})
 	c.ConnMutex.Unlock()
 	if err != nil {
 		return []byte{}, err
 	}
-	binaryResponse, err := io.ReadAll(response.Body)
-	if err != nil {
-		return []byte{}, err
+	binaryResponse := []byte{}
+	if response.Body != nil {
+		binaryResponse, err = io.ReadAll(response.Body)
+		if err != nil {
+			return []byte{}, err
+		}
 	}
 	if !initialized {
 		c.ReaderChannel = make(chan *Reader, 100)
@@ -64,15 +68,15 @@ func (c *Client) Close(ctx *context.Context) error {
 
 	c.ConnMutex.Lock()
 	defer c.ConnMutex.Unlock()
-	return c.Conn.Close()
+	return c.Conn.Close(websocket.StatusNormalClosure, "ok")
 }
 
 func (c *Client) Read(ctx *context.Context) error {
 
 	go func(c *Client) {
 		for {
-			messageType, message, err := c.Conn.ReadMessage()
-			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+			messageType, message, err := c.Conn.Read(*ctx)
+			if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
 				c.ReaderChannel <- &Reader{
 					MessageType: MessageType(messageType),
 					Message:     message,
@@ -102,10 +106,9 @@ func (c *Client) Read(ctx *context.Context) error {
 
 func (c *Client) Write(ctx *context.Context, writer *Writer) error {
 	c.ConnMutex.Lock()
-	err := c.WriteMessage(int(writer.MessageType), writer.Message)
+	err := c.Conn.Write(*ctx, websocket.MessageType(writer.MessageType), writer.Message)
 	c.ConnMutex.Unlock()
-
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+	if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
 		err := c.Close(ctx)
 		if err != nil {
 			log.Printf("websocket : failed closing connection -> %v", err)

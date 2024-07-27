@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/fatih/color"
@@ -22,25 +23,39 @@ func main() {
 
 	color.Green(fmt.Sprintf("Account login took %v seconds", time.Since(start).Seconds()))
 
+	k.TickerClients = []*kite.TickerClient{}
+	i := 0
+	// for i := 0; i < 2; i++ {
+	ticker, err := k.GetWebSocketClient(&ctx)
+	if err != nil {
+		color.Red(fmt.Sprintf("%v", err))
+		return
+	}
+	ticker.Id = i
+	k.TickerClients = append(k.TickerClients, ticker)
 	k.TickSymbolMap = map[string]kite.KiteTicker{}
-	go func() {
-		for range k.TickerClient.ConnectChan {
-
-			color.HiBlue(fmt.Sprintf("Websocket is connected in %v seconds", time.Since(start).Seconds()))
+	go func(t *kite.TickerClient) {
+		for range t.ConnectChan {
+			color.HiBlue(fmt.Sprintf("Websocket is connected in %v seconds %v", time.Since(start).Seconds(), i))
 			color.HiCyan("Subscribing Ticks")
 			start = time.Now()
-			k.TickerClient.SubscribeLTP(&ctx, []string{"NIFTY 50", "TATAMOTORS"})
-			k.TickerClient.SubscribeQuote(&ctx, []string{"INFY"})
-			k.TickerClient.SubscribeFull(&ctx, []string{"ACC"})
+			t.SubscribeLTP(&ctx, []string{"NIFTY 50", "TATAMOTORS"})
+			t.SubscribeQuote(&ctx, []string{"INFY"})
+			t.SubscribeFull(&ctx, []string{"ACC"})
 		}
-	}()
-	go func() {
-		for tick := range k.TickerClient.TickerChan {
-			color.HiWhite(fmt.Sprintf("\nTick %v: %+v\n", tick.TradingSymbol, tick))
-			k.TickerClient.Unsubscribe(&ctx, []string{"NIFTY 50", "TATAMOTORS", "INFY"})
+	}(k.TickerClients[i])
+	go func(t *kite.TickerClient) {
+		for tick := range t.TickerChan {
+			color.HiWhite(fmt.Sprintf("\nTick %v: %+v %v\n", tick.TradingSymbol, tick, i))
+			t.Unsubscribe(&ctx, []string{"NIFTY 50", "TATAMOTORS", "INFY"})
 			color.HiCyan(fmt.Sprintf("Received in %v secs", time.Since(start).Seconds()))
 		}
-	}()
-	k.TickerClient.Serve(&ctx)
+	}(k.TickerClients[i])
+	go k.TickerClients[i].Serve(&ctx)
+	<-time.After(time.Second)
+	// }
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	wg.Wait()
 
 }

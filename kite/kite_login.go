@@ -156,11 +156,6 @@ func (kite *Kite) Login(ctx *context.Context) error {
 	if err != nil {
 		return err
 	}
-	ticker, err := (*kite).GetWebSocketClient(ctx)
-	if err != nil {
-		return err
-	}
-	(*kite).TickerClient = ticker
 
 	return nil
 }
