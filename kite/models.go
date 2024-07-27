@@ -33,9 +33,9 @@ type Request struct {
 }
 
 type TickerClient struct {
-	Id                         int
 	Client                     *ws.Client
 	TickerChan                 chan KiteTicker
+	BinaryTickerChan           chan []byte
 	ConnectChan                chan struct{}
 	ErrorChan                  chan interface{}
 	LastUpdatedTime            atomic.Int64

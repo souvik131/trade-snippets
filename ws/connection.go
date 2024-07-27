@@ -17,6 +17,7 @@ type Client struct {
 	*http.Header
 	*websocket.Conn
 	ReaderChannel chan *Reader
+	IsInitialized bool
 }
 
 type MessageType int
@@ -38,7 +39,7 @@ const CLOSE MessageType = 9
 const PING MessageType = 8
 const PONG MessageType = 10
 
-var initialized = false
+// var initialized = false
 
 func (c *Client) Connect(ctx *context.Context) ([]byte, error) {
 
@@ -57,9 +58,9 @@ func (c *Client) Connect(ctx *context.Context) ([]byte, error) {
 			return []byte{}, err
 		}
 	}
-	if !initialized {
+	if !c.IsInitialized {
 		c.ReaderChannel = make(chan *Reader, 100)
-		initialized = true
+		c.IsInitialized = true
 	}
 	return binaryResponse, nil
 }

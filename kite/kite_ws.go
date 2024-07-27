@@ -43,6 +43,7 @@ func getWebsocketClient(ctx *context.Context, rawQuery string) (*TickerClient, e
 			Header: &http.Header{},
 		},
 		TickerChan:                 make(chan KiteTicker, 100),
+		BinaryTickerChan:           make(chan []byte, 100),
 		ConnectChan:                make(chan struct{}, 10),
 		ErrorChan:                  make(chan interface{}, 100),
 		FullTokens:                 map[uint32]bool{},
@@ -87,7 +88,7 @@ func (k *TickerClient) Connect(ctx *context.Context) error {
 func (k *TickerClient) Serve(ctx *context.Context) {
 
 	<-time.After(time.Millisecond)
-	log.Println("websocket : serve", k.Id)
+	log.Println("websocket : serve")
 
 	ticker := time.NewTicker(time.Second)
 
@@ -265,6 +266,7 @@ func (k *TickerClient) onBinaryMessage(reader *ws.Reader) {
 	message := reader.Message
 	numOfPackets := binary.BigEndian.Uint16(message[0:2])
 	if numOfPackets > 0 {
+		k.BinaryTickerChan <- reader.Message
 		message = message[2:]
 		for {
 			if numOfPackets == 0 {

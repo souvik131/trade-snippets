@@ -92,6 +92,7 @@ func (kite *Kite) FetchInstruments() (Instruments, error) {
 
 		TokenSymbolMap[i.Token] = i.TradingSymbol
 		SymbolTokenMap[i.TradingSymbol] = i.Token
+		(*BrokerInstrumentTokens)[i.TradingSymbol] = i
 	}
 	return insts, nil
 }
