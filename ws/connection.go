@@ -44,7 +44,7 @@ const PONG MessageType = 10
 func (c *Client) Connect(ctx *context.Context) ([]byte, error) {
 
 	conn, response, err := websocket.Dial(*ctx, c.URL.String(), &websocket.DialOptions{HTTPHeader: *c.Header})
-	log.Println(c.URL.String(), response.Status)
+	// log.Println(c.URL.String(), response.Status)
 	c.ConnMutex.Lock()
 	c.Conn = conn
 	c.ConnMutex.Unlock()

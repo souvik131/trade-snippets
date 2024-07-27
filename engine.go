@@ -46,7 +46,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 			data.Name == "SENSEX" ||
 			data.Name == "SENSEX50" ||
 			data.Name == "NIFTYNXT50"
-		if data.Expiry != "" && (data.Exchange == "NFO" || data.Exchange == "BFO") && !isIndex {
+		if data.Expiry != "" && (data.Exchange == "NFO" || data.Exchange == "BFO") && isIndex {
 			name := data.Exchange + ":" + data.Name
 			if date, ok := expiryByName[name]; ok && date != "" {
 				dateSaved, err := time.Parse(dateFormat, date)
