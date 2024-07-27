@@ -43,9 +43,17 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 			data.Name == "FINNIFTY" ||
 			data.Name == "MIDCPNIFTY" ||
 			data.Name == "BANKEX" ||
-			data.Name == "SENSEX" ||
-			data.Name == "SENSEX50" ||
-			data.Name == "NIFTYNXT50"
+			data.Name == "SENSEX"
+
+		//isNotIndex := data.Name != "NIFTY" &&
+		//	data.Name == "BANKNIFTY" &&
+		//	data.Name == "FINNIFTY" &&
+		//	data.Name == "MIDCPNIFTY" &&
+		//	data.Name == "BANKEX" &&
+		//	data.Name == "SENSEX" &&
+		//	data.Name == "SENSEX50" &&
+		//	data.Name == "NIFTYNXT50"
+
 		if data.Expiry != "" && (data.Exchange == "NFO" || data.Exchange == "BFO") && isIndex {
 			name := data.Exchange + ":" + data.Name
 			if date, ok := expiryByName[name]; ok && date != "" {
@@ -77,7 +85,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 			allTokens = append(allTokens, data.TradingSymbol)
 		}
 	}
-	log.Println(len(allTokens))
+	log.Println("Subscribed tokens: ", len(allTokens))
 
 	i := 0
 	for len(allTokens) > 0 {
@@ -100,7 +108,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 					t.SubscribeFull(ctx, tokens[0:minLen])
 					tokens = tokens[minLen:]
 					log.Println("subscribed", minLen, i)
-					<-time.After(time.Second)
+					<-time.After(time.Millisecond * 500)
 				}
 			}
 		}(k.TickerClients[i])
@@ -111,7 +119,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 		}(k.TickerClients[i])
 		go func(t *kite.TickerClient) {
 			for b := range t.BinaryTickerChan {
-				err := appendBinaryDataToFile(fmt.Sprintf("binary/data_%v.bin", time.Now().Format(dateFormat)), b, []byte{0x00})
+				err := appendBinaryDataToFile(fmt.Sprintf("binary/data_%v.bin", time.Now().Format(dateFormat)), b, []byte{})
 				if err != nil {
 					color.Red(fmt.Sprintf("%v", err))
 					return
@@ -119,7 +127,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 			}
 		}(k.TickerClients[i])
 		go k.TickerClients[i].Serve(ctx)
-		<-time.After(time.Second * time.Duration(instrumentsPerSocket/instrumentsPerRequest))
+		<-time.After(time.Millisecond * time.Duration(500*instrumentsPerSocket/instrumentsPerRequest))
 		i++
 	}
 	log.Println("All subscribed")
