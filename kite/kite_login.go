@@ -13,7 +13,6 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 	"github.com/pquerna/otp/hotp"
 	"github.com/souvik131/trade-snippets/requests"
 )
@@ -31,7 +30,7 @@ func (kite *Kite) oauth(c *gin.Context) {
 	}
 
 	k["RequestToken"] = requestToken[0]
-	ctx := context.WithoutCancel(c)
+	ctx := context.Background()
 	headers := map[string]string{
 		"Connection":      "keep-alive",
 		"User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
@@ -85,7 +84,7 @@ func (kite *Kite) GetWebSocketClient(ctx *context.Context) (*TickerClient, error
 
 	loginType := strings.TrimSpace(os.Getenv("TA_LOGINTYPE"))
 	if loginType == "" {
-		log.Fatalln("Please ensure creds.txt file has all the creds including TA_LOGINTYPE")
+		log.Fatalln("Please ensure .env file has all the creds including TA_LOGINTYPE")
 	}
 
 	k["LoginType"] = loginType
@@ -116,26 +115,23 @@ func (kite *Kite) GetWebSocketClient(ctx *context.Context) (*TickerClient, error
 		}()
 		return kws, nil
 	}
-	return nil, fmt.Errorf("LOGINTYPE not valid in creds.txt. It should be WEB or API")
+	return nil, fmt.Errorf("LOGINTYPE not valid in .env . It should be WEB or API")
 }
 
 func (kite *Kite) Login(ctx *context.Context) error {
-	err := godotenv.Load("creds.txt")
-	if err != nil {
-		log.Fatalf("Error loading creds.txt file: %s", err)
-	}
+
 	(*kite).Creds = &Creds{}
 	k := *(*kite).Creds
 
 	loginType := strings.TrimSpace(os.Getenv("TA_LOGINTYPE"))
 	if loginType == "" {
-		log.Fatalln("Please ensure creds.txt file has all the creds including TA_LOGINTYPE")
+		log.Fatalln("Please ensure .env  file has all the creds including TA_LOGINTYPE")
 	}
 
 	k["LoginType"] = loginType
 
 	if k["LoginType"] != "API" && k["LoginType"] != "WEB" {
-		return fmt.Errorf("LOGINTYPE not valid in creds.txt. It should be WEB or API")
+		return fmt.Errorf("LOGINTYPE not valid in .env . It should be WEB or API")
 	}
 
 	if k["LoginType"] == "WEB" {
@@ -152,7 +148,7 @@ func (kite *Kite) Login(ctx *context.Context) error {
 		}
 
 	}
-	_, err = kite.FetchInstruments()
+	_, err := kite.FetchInstruments()
 	if err != nil {
 		return err
 	}
@@ -165,7 +161,7 @@ func (kite *Kite) LoginWeb(ctx *context.Context) error {
 	for _, input := range webInputs {
 		val := strings.TrimSpace(os.Getenv("TA_" + strings.ToUpper(input)))
 		if val == "" {
-			log.Fatalln("Please ensure creds.txt file has all the creds including ", "TA_"+strings.ToUpper(input))
+			log.Fatalln("Please ensure .env  file has all the creds including ", "TA_"+strings.ToUpper(input))
 		}
 		k[input] = val
 	}
@@ -260,7 +256,7 @@ func (kite *Kite) LoginApi(ctx *context.Context) error {
 	for _, input := range apiInputs {
 		val := strings.TrimSpace(os.Getenv("TA_" + strings.ToUpper(input)))
 		if val == "" {
-			log.Fatalln("Please ensure creds.txt file has all the creds including ", "TA_"+strings.ToUpper(input))
+			log.Fatalln("Please ensure .env  file has all the creds including ", "TA_"+strings.ToUpper(input))
 		}
 		k[input] = val
 	}

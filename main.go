@@ -2,10 +2,9 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"sync"
 
-	"github.com/fatih/color"
 	"github.com/souvik131/trade-snippets/kite"
 )
 
@@ -15,11 +14,9 @@ func main() {
 	ctx := context.Background()
 	err := k.Login(&ctx)
 	if err != nil {
-		color.Red(fmt.Sprintf("%s", err))
+		log.Panicf("%s", err)
 		return
 	}
-
-	k.TickerClients = []*kite.TickerClient{}
 
 	Serve(&ctx, k)
 	wg := &sync.WaitGroup{}

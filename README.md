@@ -1,6 +1,6 @@
 Lightweight Golang Kite Library for Web and API
 
-Set Kite Creds
+Set Kite Creds (rename .env_example to .env and set following creds)
 
 ```
 TA_ID=              //Kite Username
@@ -12,6 +12,18 @@ TA_PATH=            //API path you want to run on. eg /kite, For this path URL i
 TA_PORT=            //Port you want the application to host
 TA_LOGINTYPE=       //Mention Login Type ( WEB / API)
 
+```
+
+Run Go
+
+```
+go run .
+```
+
+Run Docker
+
+```
+sh run.sh
 ```
 
 Web & API Support

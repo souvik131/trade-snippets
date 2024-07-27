@@ -9,7 +9,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/souvik131/trade-snippets/kite"
 )
 
@@ -35,6 +34,8 @@ func appendBinaryDataToFile(filePath string, binaryData []byte, delimiter []byte
 
 func Serve(ctx *context.Context, k *kite.Kite) {
 
+	k.TickerClients = []*kite.TickerClient{}
+
 	expiryByName := map[string]string{}
 	for _, data := range *kite.BrokerInstrumentTokens {
 
@@ -59,14 +60,12 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 			if date, ok := expiryByName[name]; ok && date != "" {
 				dateSaved, err := time.Parse(dateFormat, date)
 				if err != nil {
-					color.Red(fmt.Sprintf("%v", err))
-					return
+					log.Panicf("%v", err)
 				}
 
 				dateExpiry, err := time.Parse(dateFormat, data.Expiry)
 				if err != nil {
-					color.Red(fmt.Sprintf("%v", err))
-					return
+					log.Panicf("%v", err)
 				}
 				if dateSaved.Sub(dateExpiry) > 0 {
 					expiryByName[name] = data.Expiry
@@ -94,15 +93,13 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 		allTokens = allTokens[minLen:]
 		ticker, err := k.GetWebSocketClient(ctx)
 		if err != nil {
-			color.Red(fmt.Sprintf("%v", err))
-			return
+			log.Panicf("%v", err)
 		}
 		k.TickerClients = append(k.TickerClients, ticker)
 		k.TickSymbolMap = map[string]kite.KiteTicker{}
 		go func(t *kite.TickerClient) {
 			for range t.ConnectChan {
-				color.HiBlue(fmt.Sprintf("%v : Websocket is connected", i))
-				color.HiCyan("Subscribing Ticks")
+				log.Printf("%v : Websocket is connected", i)
 				for len(tokens) > 0 {
 					minLen := int(math.Min(instrumentsPerRequest, float64(len(tokens))))
 					t.SubscribeFull(ctx, tokens[0:minLen])
@@ -114,14 +111,14 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 		}(k.TickerClients[i])
 		go func(t *kite.TickerClient) {
 			for range t.TickerChan {
-				// color.HiWhite(fmt.Sprintf("\nTick %v %v: %+v\n", i, tick.TradingSymbol, tick))
+
 			}
 		}(k.TickerClients[i])
 		go func(t *kite.TickerClient) {
 			for b := range t.BinaryTickerChan {
-				err := appendBinaryDataToFile(fmt.Sprintf("binary/data_%v.bin", time.Now().Format(dateFormat)), b, []byte{})
+				err := appendBinaryDataToFile(fmt.Sprintf("./binary/data_%v.bin", time.Now().Format(dateFormat)), b, []byte{})
 				if err != nil {
-					color.Red(fmt.Sprintf("%v", err))
+					log.Panicf("%v", err)
 					return
 				}
 			}

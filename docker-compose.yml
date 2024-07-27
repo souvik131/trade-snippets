@@ -1,0 +1,10 @@
+version: "3"
+services:
+  fetch:
+    build:
+      context: ./
+    restart: always
+    volumes:
+      - ./binary:/usr/src/app/binary
+    env_file:
+      - .env
