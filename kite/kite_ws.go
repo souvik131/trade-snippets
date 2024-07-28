@@ -137,30 +137,46 @@ func (k *TickerClient) Reconnect(ctx *context.Context) error {
 func (k *TickerClient) Resubscribe(ctx *context.Context) error {
 
 	keys := make([]string, 0, len(k.LtpTokens))
-	for k2 := range k.FullTokens {
+	for k2 := range k.LtpTokens {
 		keys = append(keys, TokenSymbolMap[k2])
 	}
-	err := k.SubscribeQuote(ctx, keys)
-	if err != nil {
-		return err
+	for len(keys) > 0 {
+		minLen := int(math.Min(100, float64(len(keys))))
+		keys = keys[0:minLen]
+		err := k.SubscribeLTP(ctx, keys[minLen:])
+		if err != nil {
+			return err
+		}
 	}
+
 	keys = make([]string, 0, len(k.QuoteTokens))
-	for k2 := range k.FullTokens {
+	for k2 := range k.QuoteTokens {
 		keys = append(keys, TokenSymbolMap[k2])
 	}
-	err = k.SubscribeQuote(ctx, keys)
-	if err != nil {
-		return err
+
+	for len(keys) > 0 {
+		minLen := int(math.Min(100, float64(len(keys))))
+		keys = keys[0:minLen]
+		err := k.SubscribeQuote(ctx, keys[minLen:])
+		if err != nil {
+			return err
+		}
 	}
 
 	keys = make([]string, 0, len(k.FullTokens))
 	for k2 := range k.FullTokens {
 		keys = append(keys, TokenSymbolMap[k2])
 	}
-	err = k.SubscribeFull(ctx, keys)
-	if err != nil {
-		return err
+
+	for len(keys) > 0 {
+		minLen := int(math.Min(100, float64(len(keys))))
+		keys = keys[0:minLen]
+		err := k.SubscribeFull(ctx, keys[minLen:])
+		if err != nil {
+			return err
+		}
 	}
+
 	return nil
 
 }
