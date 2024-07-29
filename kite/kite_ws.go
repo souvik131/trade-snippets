@@ -15,7 +15,7 @@ import (
 	"github.com/souvik131/trade-snippets/ws"
 )
 
-const HeartBeatIntervalInSeconds float64 = 6
+const HeartBeatIntervalInSeconds float64 = 30
 
 func GetWebsocketClientForWeb(ctx *context.Context, id string, token string) (*TickerClient, error) {
 
@@ -250,7 +250,7 @@ func (k *TickerClient) Unsubscribe(ctx *context.Context, tokens []string) error 
 
 func (k *TickerClient) checkHeartBeat(ctx *context.Context) bool {
 	if time.Since(time.Unix(k.LastUpdatedTime.Load(), 0)).Seconds() > float64(k.HeartBeatIntervalInSeconds) {
-		k.HeartBeatIntervalInSeconds *= 1.1
+		k.HeartBeatIntervalInSeconds *= 2
 		go k.Reconnect(ctx)
 		return false
 	} else {
