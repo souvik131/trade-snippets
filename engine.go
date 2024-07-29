@@ -105,12 +105,13 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 					t.SubscribeFull(ctx, tokens[0:minLen])
 					tokens = tokens[minLen:]
 					log.Println("subscribed", minLen, i)
-					<-time.After(time.Second)
+					<-time.After(5 * time.Second)
 				}
 			}
 		}(k.TickerClients[i])
 		go func(t *kite.TickerClient) {
-			for range t.TickerChan {
+			for ticker := range t.TickerChan {
+				log.Println(ticker.TradingSymbol)
 
 			}
 		}(k.TickerClients[i])
@@ -124,7 +125,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 			}
 		}(k.TickerClients[i])
 		go k.TickerClients[i].Serve(ctx)
-		<-time.After(time.Second * time.Duration(instrumentsPerSocket/instrumentsPerRequest))
+		<-time.After(5 * time.Second * time.Duration(instrumentsPerSocket/instrumentsPerRequest))
 		i++
 	}
 	log.Println("All subscribed")

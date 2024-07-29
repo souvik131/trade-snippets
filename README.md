@@ -14,12 +14,6 @@ TA_LOGINTYPE=       //Mention Login Type ( WEB / API)
 
 ```
 
-Run Go
-
-```
-go run .
-```
-
 Run Docker
 
 ```
