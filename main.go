@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/souvik131/trade-snippets/kite"
 )
@@ -19,9 +20,11 @@ func main() {
 		log.Panicf("%s", err)
 		return
 	}
-
+	go Host()
 	Serve(&ctx, k)
-	Host()
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	wg.Wait()
 
 }
 func Host() {
@@ -34,7 +37,6 @@ func Host() {
 	// Custom handler for the root path
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
-			// Serve the index.html file
 			indexPath := filepath.Join(dir, "index.html")
 			if _, err := os.Stat(indexPath); os.IsNotExist(err) {
 				http.NotFound(w, r)
@@ -42,20 +44,13 @@ func Host() {
 			}
 			http.ServeFile(w, r, indexPath)
 		} else {
-			// Serve other files
 			fileServer.ServeHTTP(w, r)
 		}
 	})
-
-	// Get the absolute path of the directory
 	absDir, err := filepath.Abs(dir)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Output the directory being served
-	log.Printf("Serving files from %s on http://localhost:8080\n", absDir)
-
-	// Start the HTTP server
+	log.Printf("Serving files from %s on http://localhost:8080", absDir)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
