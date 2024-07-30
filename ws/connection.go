@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"sync"
 
-	"nhooyr.io/websocket"
+	"github.com/gorilla/websocket"
 )
 
 type Client struct {
@@ -43,7 +43,7 @@ const PONG MessageType = 10
 
 func (c *Client) Connect(ctx *context.Context) ([]byte, error) {
 
-	conn, response, err := websocket.Dial(*ctx, c.URL.String(), &websocket.DialOptions{HTTPHeader: *c.Header})
+	conn, response, err := websocket.DefaultDialer.DialContext(*ctx, c.URL.String(), *c.Header)
 	conn.SetReadLimit(4e6)
 	// log.Println(c.URL.String(), response.Status)
 	c.ConnMutex.Lock()
@@ -70,15 +70,15 @@ func (c *Client) Close(ctx *context.Context) error {
 
 	c.ConnMutex.Lock()
 	defer c.ConnMutex.Unlock()
-	return c.Conn.Close(websocket.StatusNormalClosure, "ok")
+	return c.Conn.Close()
 }
 
 func (c *Client) Read(ctx *context.Context) error {
 
 	go func(c *Client) {
 		for {
-			messageType, message, err := c.Conn.Read(*ctx)
-			if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
+			messageType, message, err := c.Conn.ReadMessage()
+			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 				c.ReaderChannel <- &Reader{
 					MessageType: MessageType(messageType),
 					Message:     message,
@@ -108,9 +108,10 @@ func (c *Client) Read(ctx *context.Context) error {
 
 func (c *Client) Write(ctx *context.Context, writer *Writer) error {
 	c.ConnMutex.Lock()
-	err := c.Conn.Write(*ctx, websocket.MessageType(writer.MessageType), writer.Message)
+	err := c.WriteMessage(int(writer.MessageType), writer.Message)
 	c.ConnMutex.Unlock()
-	if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
+
+	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 		err := c.Close(ctx)
 		if err != nil {
 			log.Printf("websocket : failed closing connection -> %v", err)
