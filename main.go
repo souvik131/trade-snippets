@@ -8,19 +8,28 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/joho/godotenv"
 	"github.com/souvik131/trade-snippets/kite"
 )
 
 func main() {
 
-	var k = &kite.Kite{}
 	ctx := context.Background()
-	err := k.Login(&ctx)
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
+
+	var k = &kite.Kite{}
+	err = k.Login(&ctx)
 	if err != nil {
 		log.Panicf("%s", err)
 		return
 	}
+
 	go Host()
+
 	Serve(&ctx, k)
 	wg := &sync.WaitGroup{}
 	wg.Add(1)

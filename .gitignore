@@ -1,2 +1,4 @@
-data*.bin
+*.bin
+*.proto
 .env
+.DS_Store

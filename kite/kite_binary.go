@@ -6,7 +6,7 @@ import (
 
 type Packet []byte
 
-func (packet Packet) parseBinary(maxSize int) []uint32 {
+func (packet Packet) ParseBinary(maxSize int) []uint32 {
 
 	values := []uint32{}
 	for {
@@ -22,7 +22,7 @@ func (packet Packet) parseBinary(maxSize int) []uint32 {
 
 }
 
-func (packet Packet) parseMarketDepth() []uint32 {
+func (packet Packet) ParseMarketDepth() []uint32 {
 
 	packetSize := len(packet)
 	values := []uint32{}

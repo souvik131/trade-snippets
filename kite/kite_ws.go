@@ -296,7 +296,7 @@ func (k *TickerClient) onBinaryMessage(reader *ws.Reader) {
 				numOfPackets--
 				packetSize := binary.BigEndian.Uint16(message[0:2])
 				packet := Packet(message[2 : packetSize+2])
-				values := packet.parseBinary(int(math.Min(64, float64(len(packet)))))
+				values := packet.ParseBinary(int(math.Min(64, float64(len(packet)))))
 				ticker := KiteTicker{}
 				if len(values) >= 2 {
 					ticker.Token = values[0]
@@ -351,7 +351,7 @@ func (k *TickerClient) onBinaryMessage(reader *ws.Reader) {
 
 					packet = packet[64:]
 
-					values := packet.parseMarketDepth()
+					values := packet.ParseMarketDepth()
 					lobDepth := len(values) / 6
 
 					for {

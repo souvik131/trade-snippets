@@ -3,20 +3,22 @@ package main
 import (
 	"bytes"
 	"context"
-	"fmt"
+	"encoding/binary"
 	"log"
 	"math"
 	"os"
 	"time"
 
 	"github.com/souvik131/trade-snippets/kite"
+	"github.com/souvik131/trade-snippets/storage"
+	"google.golang.org/protobuf/proto"
 )
 
 var instrumentsPerSocket = 3000.0
-var instrumentsPerRequest = 1000.0
+var instrumentsPerRequest = 2000.0
 var dateFormat = "2006-01-02"
 
-func appendBinaryDataToFile(filePath string, binaryData []byte, delimiter []byte) error {
+func appendToFile(filePath string, binaryData []byte) error {
 	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
@@ -24,7 +26,6 @@ func appendBinaryDataToFile(filePath string, binaryData []byte, delimiter []byte
 	defer file.Close()
 	var buffer bytes.Buffer
 	buffer.Write(binaryData)
-	buffer.Write(delimiter)
 	_, err = file.Write(buffer.Bytes())
 	if err != nil {
 		return err
@@ -32,7 +33,35 @@ func appendBinaryDataToFile(filePath string, binaryData []byte, delimiter []byte
 	return nil
 }
 
+func saveFile(filePath string, binaryData []byte) error {
+	file, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = file.Write(binaryData)
+	return err
+}
+
 func Serve(ctx *context.Context, k *kite.Kite) {
+	iMap := &storage.Map{
+		TickerMap: []*storage.TickerMap{},
+	}
+
+	for name, data := range *kite.BrokerInstrumentTokens {
+		iMap.TickerMap = append(iMap.TickerMap, &storage.TickerMap{
+			Token:         data.Token,
+			TradingSymbol: name,
+		})
+	}
+
+	bytes, err := proto.Marshal(iMap)
+	if err != nil {
+		log.Panicf("%s", err)
+	}
+	saveFile("./binary/map_"+time.Now().Format("20060102_150405")+".proto", bytes)
+
+	log.Println("Instrument Map successfully written to file")
 
 	k.TickerClients = []*kite.TickerClient{}
 
@@ -110,13 +139,117 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 			}
 		}(k.TickerClients[i])
 		go func(t *kite.TickerClient) {
-			for b := range t.BinaryTickerChan {
-				log.Println("Received Binary tickers")
-				err := appendBinaryDataToFile(fmt.Sprintf("./binary/data_%v.bin", time.Now().Format(dateFormat)), b, []byte{})
-				if err != nil {
-					log.Panicf("%v", err)
-					return
+			for message := range t.BinaryTickerChan {
+
+				appendToFile("./binary/data_"+time.Now().Format("20060102")+".bin", message)
+				data := &storage.Data{
+					Tickers: []*storage.Ticker{},
 				}
+				numOfPackets := binary.BigEndian.Uint16(message[0:2])
+				if numOfPackets > 0 {
+
+					message = message[2:]
+					for {
+						if numOfPackets == 0 {
+							break
+						}
+
+						numOfPackets--
+						packetSize := binary.BigEndian.Uint16(message[0:2])
+						packet := kite.Packet(message[2 : packetSize+2])
+						values := packet.ParseBinary(int(math.Min(64, float64(len(packet)))))
+						ticker := &storage.Ticker{
+							Depth: &storage.Depth{
+								Buy:  []*storage.Order{},
+								Sell: []*storage.Order{},
+							},
+						}
+						if len(values) >= 2 {
+							ticker.Token = values[0]
+							ticker.LastPrice = values[1]
+						}
+						switch len(values) {
+						case 2:
+						case 7:
+							ticker.High = values[2]
+							ticker.Low = values[3]
+							ticker.Open = values[4]
+							ticker.Close = values[5]
+							ticker.ExchangeTimestamp = values[6]
+						case 8:
+							ticker.High = values[2]
+							ticker.Low = values[3]
+							ticker.Open = values[4]
+							ticker.Close = values[5]
+							ticker.PriceChange = values[6]
+							ticker.ExchangeTimestamp = values[7]
+						case 11:
+							ticker.LastTradedQuantity = values[2]
+							ticker.AverageTradedPrice = values[3]
+							ticker.VolumeTraded = values[4]
+							ticker.TotalBuy = values[5]
+							ticker.TotalSell = values[6]
+							ticker.High = values[7]
+							ticker.Low = values[8]
+							ticker.Open = values[9]
+							ticker.Close = values[10]
+						case 16:
+							ticker.LastTradedQuantity = values[2]
+							ticker.AverageTradedPrice = values[3]
+							ticker.VolumeTraded = values[4]
+							ticker.TotalBuy = values[5]
+							ticker.TotalSell = values[6]
+							ticker.High = values[7]
+							ticker.Low = values[8]
+							ticker.Open = values[9]
+							ticker.Close = values[10]
+							ticker.LastTradedTimestamp = values[11]
+							ticker.OI = values[12]
+							ticker.OIHigh = values[13]
+							ticker.OILow = values[14]
+							ticker.ExchangeTimestamp = values[15]
+						default:
+							log.Println("unkown length of packet", len(values), values)
+						}
+
+						if len(packet) > 64 {
+
+							packet = packet[64:]
+
+							values := packet.ParseMarketDepth()
+							lobDepth := len(values) / 6
+
+							for {
+								if len(values) == 0 {
+
+									break
+								}
+								qty := values[0]
+								price := values[1]
+								orders := values[2]
+								if len(ticker.Depth.Buy) < lobDepth {
+									ticker.Depth.Buy = append(ticker.Depth.Buy, &storage.Order{Price: price, Quantity: qty, Orders: orders})
+								} else {
+
+									ticker.Depth.Sell = append(ticker.Depth.Sell, &storage.Order{Price: price, Quantity: qty, Orders: orders})
+								}
+								values = values[3:]
+
+							}
+						}
+						if len(message) > int(packetSize+2) {
+							message = message[packetSize+2:]
+						}
+						data.Tickers = append(data.Tickers, ticker)
+
+					}
+				}
+				bytes, err := proto.Marshal(data)
+				if err != nil {
+					log.Panicf("%s", err)
+				}
+				saveFile("./binary/data_"+time.Now().Format("20060102_150405")+".proto", bytes)
+
 			}
 		}(k.TickerClients[i])
 		go k.TickerClients[i].Serve(ctx)
