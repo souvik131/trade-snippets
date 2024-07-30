@@ -28,13 +28,8 @@ func main() {
 
 }
 func Host() {
-	// Define the directory to serve
 	dir := "./binary"
-
-	// Create a file server handler
 	fileServer := http.FileServer(http.Dir(dir))
-
-	// Custom handler for the root path
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
 			indexPath := filepath.Join(dir, "index.html")
