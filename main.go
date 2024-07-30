@@ -36,7 +36,9 @@ func main() {
 	wg.Wait()
 
 }
+
 func Host() {
+
 	dir := "./binary"
 	fileServer := http.FileServer(http.Dir(dir))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

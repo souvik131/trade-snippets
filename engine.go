@@ -18,6 +18,7 @@ import (
 var instrumentsPerSocket = 3000.0
 var instrumentsPerRequest = 2000.0
 var dateFormat = "2006-01-02"
+var delimiter = []byte("\n---\n")
 
 func compress(input []byte) ([]byte, error) {
 	var b bytes.Buffer
@@ -57,21 +58,40 @@ func decompress(input []byte) ([]byte, error) {
 	return out.Bytes(), nil
 }
 
-func appendToFile(filePath string, binaryData []byte) error {
-	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+func appendWithDelimiter(filename string, data []byte) error {
+
+	// Check if the file exists
+	fileExists := true
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		fileExists = false
+	}
+
+	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
-	var buffer bytes.Buffer
-	buffer.Write(binaryData)
-	_, err = file.Write(buffer.Bytes())
+
+	// If the file does not exist, write the initial delimiter
+	if !fileExists {
+		_, err = file.Write(delimiter)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = file.Write(data)
 	if err != nil {
 		return err
 	}
+
+	_, err = file.Write(delimiter)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
-
 func saveFile(filePath string, binaryData []byte) error {
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -102,7 +122,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 	if err != nil {
 		log.Panicf("%s", err)
 	}
-	saveFile("./binary/map_"+time.Now().Format("20060102")+".zstd", bytes)
+	saveFile("./binary/map_proto_"+time.Now().Format("20060102")+".zstd", bytes)
 
 	log.Println("Instrument Map successfully written to file")
 
@@ -183,6 +203,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 		}(k.TickerClients[i])
 		go func(t *kite.TickerClient) {
 			for message := range t.BinaryTickerChan {
+				appendWithDelimiter("./binary/data_bin_"+time.Now().Format("20060102")+".zstd", message)
 
 				// appendToFile("./binary/data_"+time.Now().Format("20060102")+".bin", message)
 				data := &storage.Data{
@@ -295,7 +316,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 				if err != nil {
 					log.Panicf("%s", err)
 				}
-				saveFile("./binary/data_"+time.Now().Format("20060102_150405")+".zstd", bytes)
+				appendWithDelimiter("./binary/data_proto_"+time.Now().Format("20060102")+".zstd", bytes)
 
 			}
 		}(k.TickerClients[i])
