@@ -79,7 +79,7 @@ func (kite *Kite) oauth(c *gin.Context) {
 
 }
 
-func (kite *Kite) GetWebSocketClient(ctx *context.Context) (*TickerClient, error) {
+func (kite *Kite) GetWebSocketClient(ctx *context.Context, receiveBinaryTickers bool) (*TickerClient, error) {
 	k := *(*kite).Creds
 
 	loginType := strings.TrimSpace(os.Getenv("TA_LOGINTYPE"))
@@ -90,7 +90,7 @@ func (kite *Kite) GetWebSocketClient(ctx *context.Context) (*TickerClient, error
 	k["LoginType"] = loginType
 
 	if k["LoginType"] == "WEB" {
-		kws, err := GetWebsocketClientForWeb(ctx, k["Id"], k["Token"])
+		kws, err := GetWebsocketClientForWeb(ctx, k["Id"], k["Token"], receiveBinaryTickers)
 		if err != nil {
 			return nil, err
 		}
@@ -103,7 +103,7 @@ func (kite *Kite) GetWebSocketClient(ctx *context.Context) (*TickerClient, error
 		}()
 		return kws, nil
 	} else if k["LoginType"] == "API" {
-		kws, err := GetWebsocketClientForAPI(ctx, k["Token"])
+		kws, err := GetWebsocketClientForAPI(ctx, k["Token"], receiveBinaryTickers)
 		if err != nil {
 			return nil, err
 		}

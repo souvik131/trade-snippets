@@ -91,7 +91,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 		minLen := int(math.Min(instrumentsPerSocket, float64(len(allTokens))))
 		tokens := allTokens[0:minLen]
 		allTokens = allTokens[minLen:]
-		ticker, err := k.GetWebSocketClient(ctx)
+		ticker, err := k.GetWebSocketClient(ctx, true)
 		if err != nil {
 			log.Panicf("%v", err)
 		}
@@ -110,13 +110,8 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 			}
 		}(k.TickerClients[i])
 		go func(t *kite.TickerClient) {
-			for ticker := range t.TickerChan {
-				log.Println(ticker.TradingSymbol)
-
-			}
-		}(k.TickerClients[i])
-		go func(t *kite.TickerClient) {
 			for b := range t.BinaryTickerChan {
+				log.Println("Received Binary tickers")
 				err := appendBinaryDataToFile(fmt.Sprintf("./binary/data_%v.bin", time.Now().Format(dateFormat)), b, []byte{})
 				if err != nil {
 					log.Panicf("%v", err)

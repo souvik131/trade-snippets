@@ -17,20 +17,20 @@ import (
 
 const HeartBeatIntervalInSeconds float64 = 30
 
-func GetWebsocketClientForWeb(ctx *context.Context, id string, token string) (*TickerClient, error) {
+func GetWebsocketClientForWeb(ctx *context.Context, id string, token string, receiveBinaryTickers bool) (*TickerClient, error) {
 
 	token = strings.Replace(token, "enctoken ", "", 1)
-	return getWebsocketClient(ctx, fmt.Sprintf("user_id=%v&access_token=%v&api_key=kitefront", id, token))
+	return getWebsocketClient(ctx, fmt.Sprintf("user_id=%v&access_token=%v&api_key=kitefront", id, token), receiveBinaryTickers)
 }
 
-func GetWebsocketClientForAPI(ctx *context.Context, token string) (*TickerClient, error) {
+func GetWebsocketClientForAPI(ctx *context.Context, token string, receiveBinaryTickers bool) (*TickerClient, error) {
 	token = strings.Replace(token, "token ", "", 1)
 	apiKey := strings.Split(token, ":")[0]
 	accessToken := strings.Replace(token, apiKey+":", "", 1)
-	return getWebsocketClient(ctx, fmt.Sprintf("access_token=%v&api_key=%v", accessToken, apiKey))
+	return getWebsocketClient(ctx, fmt.Sprintf("access_token=%v&api_key=%v", accessToken, apiKey), receiveBinaryTickers)
 }
 
-func getWebsocketClient(ctx *context.Context, rawQuery string) (*TickerClient, error) {
+func getWebsocketClient(ctx *context.Context, rawQuery string, receiveBinaryTickers bool) (*TickerClient, error) {
 	log.Printf("websocket : start")
 
 	k := &TickerClient{
@@ -50,6 +50,7 @@ func getWebsocketClient(ctx *context.Context, rawQuery string) (*TickerClient, e
 		QuoteTokens:                map[uint32]bool{},
 		LtpTokens:                  map[uint32]bool{},
 		HeartBeatIntervalInSeconds: HeartBeatIntervalInSeconds,
+		ReceiveBinaryTickers:       receiveBinaryTickers,
 	}
 
 	k.LastUpdatedTime.Store(time.Now().Unix())
@@ -282,95 +283,98 @@ func (k *TickerClient) onBinaryMessage(reader *ws.Reader) {
 	message := reader.Message
 	numOfPackets := binary.BigEndian.Uint16(message[0:2])
 	if numOfPackets > 0 {
-		k.BinaryTickerChan <- reader.Message
-		message = message[2:]
-		for {
-			if numOfPackets == 0 {
-				break
-			}
-
-			numOfPackets--
-			packetSize := binary.BigEndian.Uint16(message[0:2])
-			packet := Packet(message[2 : packetSize+2])
-			values := packet.parseBinary(int(math.Min(64, float64(len(packet)))))
-			ticker := KiteTicker{}
-			if len(values) >= 2 {
-				ticker.Token = values[0]
-				ticker.TradingSymbol = TokenSymbolMap[ticker.Token]
-				ticker.LastPrice = float64(values[1]) / 100
-			}
-			switch len(values) {
-			case 2:
-			case 7:
-				ticker.High = float64(values[2]) / 100
-				ticker.Low = float64(values[3]) / 100
-				ticker.Open = float64(values[4]) / 100
-				ticker.Close = float64(values[5]) / 100
-				ticker.ExchangeTimestamp = time.Unix(int64(values[6]), 0)
-			case 8:
-				ticker.High = float64(values[2]) / 100
-				ticker.Low = float64(values[3]) / 100
-				ticker.Open = float64(values[4]) / 100
-				ticker.Close = float64(values[5]) / 100
-				ticker.PriceChange = float64(values[6]) / 100
-				ticker.ExchangeTimestamp = time.Unix(int64(values[7]), 0)
-			case 11:
-				ticker.LastTradedQuantity = values[2]
-				ticker.AverageTradedPrice = float64(values[3]) / 100
-				ticker.VolumeTraded = values[4]
-				ticker.TotalBuy = values[5]
-				ticker.TotalSell = values[6]
-				ticker.High = float64(values[7]) / 100
-				ticker.Low = float64(values[8]) / 100
-				ticker.Open = float64(values[9]) / 100
-				ticker.Close = float64(values[10]) / 100
-			case 16:
-				ticker.LastTradedQuantity = values[2]
-				ticker.AverageTradedPrice = float64(values[3]) / 100
-				ticker.VolumeTraded = values[4]
-				ticker.TotalBuy = values[5]
-				ticker.TotalSell = values[6]
-				ticker.High = float64(values[7]) / 100
-				ticker.Low = float64(values[8]) / 100
-				ticker.Open = float64(values[9]) / 100
-				ticker.Close = float64(values[10]) / 100
-				ticker.LastTradedTimestamp = time.Unix(int64(values[11]), 0)
-				ticker.OI = values[12]
-				ticker.OIHigh = values[13]
-				ticker.OILow = values[14]
-				ticker.ExchangeTimestamp = time.Unix(int64(values[15]), 0)
-			default:
-				log.Println("unkown length of packet", len(values), values)
-			}
-
-			if len(packet) > 64 {
-
-				packet = packet[64:]
-
-				values := packet.parseMarketDepth()
-				lobDepth := len(values) / 6
-
-				for {
-					if len(values) == 0 {
-
-						break
-					}
-					qty := values[0]
-					price := float64(values[1]) / 100
-					orders := values[2]
-					if len(ticker.Depth.Buy) < lobDepth {
-						ticker.Depth.Buy = append(ticker.Depth.Buy, LimitOrder{Price: price, Quantity: qty, Orders: orders})
-					} else {
-
-						ticker.Depth.Sell = append(ticker.Depth.Sell, LimitOrder{Price: price, Quantity: qty, Orders: orders})
-					}
-					values = values[3:]
-
+		if k.ReceiveBinaryTickers {
+			k.BinaryTickerChan <- reader.Message
+		} else {
+			message = message[2:]
+			for {
+				if numOfPackets == 0 {
+					break
 				}
-			}
-			k.TickerChan <- ticker
-			if len(message) > int(packetSize+2) {
-				message = message[packetSize+2:]
+
+				numOfPackets--
+				packetSize := binary.BigEndian.Uint16(message[0:2])
+				packet := Packet(message[2 : packetSize+2])
+				values := packet.parseBinary(int(math.Min(64, float64(len(packet)))))
+				ticker := KiteTicker{}
+				if len(values) >= 2 {
+					ticker.Token = values[0]
+					ticker.TradingSymbol = TokenSymbolMap[ticker.Token]
+					ticker.LastPrice = float64(values[1]) / 100
+				}
+				switch len(values) {
+				case 2:
+				case 7:
+					ticker.High = float64(values[2]) / 100
+					ticker.Low = float64(values[3]) / 100
+					ticker.Open = float64(values[4]) / 100
+					ticker.Close = float64(values[5]) / 100
+					ticker.ExchangeTimestamp = time.Unix(int64(values[6]), 0)
+				case 8:
+					ticker.High = float64(values[2]) / 100
+					ticker.Low = float64(values[3]) / 100
+					ticker.Open = float64(values[4]) / 100
+					ticker.Close = float64(values[5]) / 100
+					ticker.PriceChange = float64(values[6]) / 100
+					ticker.ExchangeTimestamp = time.Unix(int64(values[7]), 0)
+				case 11:
+					ticker.LastTradedQuantity = values[2]
+					ticker.AverageTradedPrice = float64(values[3]) / 100
+					ticker.VolumeTraded = values[4]
+					ticker.TotalBuy = values[5]
+					ticker.TotalSell = values[6]
+					ticker.High = float64(values[7]) / 100
+					ticker.Low = float64(values[8]) / 100
+					ticker.Open = float64(values[9]) / 100
+					ticker.Close = float64(values[10]) / 100
+				case 16:
+					ticker.LastTradedQuantity = values[2]
+					ticker.AverageTradedPrice = float64(values[3]) / 100
+					ticker.VolumeTraded = values[4]
+					ticker.TotalBuy = values[5]
+					ticker.TotalSell = values[6]
+					ticker.High = float64(values[7]) / 100
+					ticker.Low = float64(values[8]) / 100
+					ticker.Open = float64(values[9]) / 100
+					ticker.Close = float64(values[10]) / 100
+					ticker.LastTradedTimestamp = time.Unix(int64(values[11]), 0)
+					ticker.OI = values[12]
+					ticker.OIHigh = values[13]
+					ticker.OILow = values[14]
+					ticker.ExchangeTimestamp = time.Unix(int64(values[15]), 0)
+				default:
+					log.Println("unkown length of packet", len(values), values)
+				}
+
+				if len(packet) > 64 {
+
+					packet = packet[64:]
+
+					values := packet.parseMarketDepth()
+					lobDepth := len(values) / 6
+
+					for {
+						if len(values) == 0 {
+
+							break
+						}
+						qty := values[0]
+						price := float64(values[1]) / 100
+						orders := values[2]
+						if len(ticker.Depth.Buy) < lobDepth {
+							ticker.Depth.Buy = append(ticker.Depth.Buy, LimitOrder{Price: price, Quantity: qty, Orders: orders})
+						} else {
+
+							ticker.Depth.Sell = append(ticker.Depth.Sell, LimitOrder{Price: price, Quantity: qty, Orders: orders})
+						}
+						values = values[3:]
+
+					}
+				}
+				k.TickerChan <- ticker
+				if len(message) > int(packetSize+2) {
+					message = message[packetSize+2:]
+				}
 			}
 		}
 	}
