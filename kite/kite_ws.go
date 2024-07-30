@@ -16,6 +16,7 @@ import (
 )
 
 const HeartBeatIntervalInSeconds float64 = 30
+const BufferSize int = 1000
 
 func GetWebsocketClientForWeb(ctx *context.Context, id string, token string, receiveBinaryTickers bool) (*TickerClient, error) {
 
@@ -42,10 +43,10 @@ func getWebsocketClient(ctx *context.Context, rawQuery string, receiveBinaryTick
 			},
 			Header: &http.Header{},
 		},
-		TickerChan:                 make(chan KiteTicker, 100),
-		BinaryTickerChan:           make(chan []byte, 100),
+		TickerChan:                 make(chan KiteTicker, BufferSize),
+		BinaryTickerChan:           make(chan []byte, BufferSize),
 		ConnectChan:                make(chan struct{}, 10),
-		ErrorChan:                  make(chan interface{}, 100),
+		ErrorChan:                  make(chan interface{}, BufferSize),
 		FullTokens:                 map[uint32]bool{},
 		QuoteTokens:                map[uint32]bool{},
 		LtpTokens:                  map[uint32]bool{},
@@ -142,7 +143,7 @@ func (k *TickerClient) Resubscribe(ctx *context.Context) error {
 		keys = append(keys, TokenSymbolMap[k2])
 	}
 	for len(keys) > 0 {
-		minLen := int(math.Min(100, float64(len(keys))))
+		minLen := int(math.Min(float64(BufferSize), float64(len(keys))))
 		keys = keys[0:minLen]
 		err := k.SubscribeLTP(ctx, keys[minLen:])
 		if err != nil {
@@ -156,7 +157,7 @@ func (k *TickerClient) Resubscribe(ctx *context.Context) error {
 	}
 
 	for len(keys) > 0 {
-		minLen := int(math.Min(100, float64(len(keys))))
+		minLen := int(math.Min(float64(BufferSize), float64(len(keys))))
 		keys = keys[0:minLen]
 		err := k.SubscribeQuote(ctx, keys[minLen:])
 		if err != nil {
@@ -170,7 +171,7 @@ func (k *TickerClient) Resubscribe(ctx *context.Context) error {
 	}
 
 	for len(keys) > 0 {
-		minLen := int(math.Min(100, float64(len(keys))))
+		minLen := int(math.Min(float64(BufferSize), float64(len(keys))))
 		keys = keys[0:minLen]
 		err := k.SubscribeFull(ctx, keys[minLen:])
 		if err != nil {

@@ -13,7 +13,7 @@ import (
 )
 
 var instrumentsPerSocket = 3000.0
-var instrumentsPerRequest = 100.0
+var instrumentsPerRequest = 1000.0
 var dateFormat = "2006-01-02"
 
 func appendBinaryDataToFile(filePath string, binaryData []byte, delimiter []byte) error {
