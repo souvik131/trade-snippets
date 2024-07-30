@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/klauspost/compress/zstd"
 	"github.com/souvik131/trade-snippets/kite"
 	"github.com/souvik131/trade-snippets/storage"
 	"google.golang.org/protobuf/proto"
@@ -17,6 +18,44 @@ import (
 var instrumentsPerSocket = 3000.0
 var instrumentsPerRequest = 2000.0
 var dateFormat = "2006-01-02"
+
+func compress(input []byte) ([]byte, error) {
+	var b bytes.Buffer
+	encoder, err := zstd.NewWriter(&b)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = encoder.Write(input)
+	if err != nil {
+		encoder.Close()
+		return nil, err
+	}
+
+	err = encoder.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	return b.Bytes(), nil
+}
+
+func decompress(input []byte) ([]byte, error) {
+	b := bytes.NewReader(input)
+	decoder, err := zstd.NewReader(b)
+	if err != nil {
+		return nil, err
+	}
+	defer decoder.Close()
+
+	var out bytes.Buffer
+	_, err = out.ReadFrom(decoder)
+	if err != nil {
+		return nil, err
+	}
+
+	return out.Bytes(), nil
+}
 
 func appendToFile(filePath string, binaryData []byte) error {
 	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -59,7 +98,11 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 	if err != nil {
 		log.Panicf("%s", err)
 	}
-	saveFile("./binary/map_"+time.Now().Format("20060102_150405")+".proto", bytes)
+	bytes, err = compress(bytes)
+	if err != nil {
+		log.Panicf("%s", err)
+	}
+	saveFile("./binary/map_"+time.Now().Format("20060102")+".zstd", bytes)
 
 	log.Println("Instrument Map successfully written to file")
 
@@ -141,7 +184,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 		go func(t *kite.TickerClient) {
 			for message := range t.BinaryTickerChan {
 
-				appendToFile("./binary/data_"+time.Now().Format("20060102")+".bin", message)
+				// appendToFile("./binary/data_"+time.Now().Format("20060102")+".bin", message)
 				data := &storage.Data{
 					Tickers: []*storage.Ticker{},
 				}
@@ -248,7 +291,11 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 				if err != nil {
 					log.Panicf("%s", err)
 				}
-				saveFile("./binary/data_"+time.Now().Format("20060102_150405")+".proto", bytes)
+				bytes, err = compress(bytes)
+				if err != nil {
+					log.Panicf("%s", err)
+				}
+				saveFile("./binary/data_"+time.Now().Format("20060102_150405")+".zstd", bytes)
 
 			}
 		}(k.TickerClients[i])

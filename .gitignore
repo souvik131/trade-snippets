@@ -1,4 +1,5 @@
 *.bin
 *.proto
+*.zstd
 .env
 .DS_Store
