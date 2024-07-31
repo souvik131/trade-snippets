@@ -2,7 +2,8 @@ package main
 
 func main() {
 
-	// Read()
-	Write()
-	// Host()
+	// Read(time.Now())
+
+	go Write()
+	Host()
 }

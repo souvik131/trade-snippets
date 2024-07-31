@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package storage;
+
+
+option go_package = "./storage;storage";
+
+
+message Map{
+	repeated TickerMap TickerMap      =1;
+}
+
+message TickerMap{
+	uint32 Token                    =1;
+	string TradingSymbol            =2;
+	string Exchange              	=3;
+	string Name						=4;
+	string Expiry					=5;
+	float Strike					=6;
+	float TickSize					=7;
+	uint32 LotSize					=8;
+	string InstrumentType 			=9;
+	string Segment 					=10;
+}
+
+message Data{
+	repeated Ticker Tickers      =1;
+}
+
+
+message Ticker{
+	uint32 Token              =1;
+	uint32 LastPrice          =2;
+	uint32 LastTradedQuantity =3;
+	uint32 AverageTradedPrice =4;
+	uint32 VolumeTraded       =5;
+	uint32 TotalBuy           =6;
+	uint32 TotalSell          =7;
+	uint32 High               =8;
+	uint32 Low                =9;
+	uint32 Open               =10;
+	uint32 Close              =11;
+	uint32 OI                 =12;
+	uint32 OIHigh             =13;
+	uint32 OILow              =14;
+	uint32 PriceChange        =15;
+	uint32 LastTradedTimestamp=16;
+	uint32 ExchangeTimestamp  =17;
+	Depth  Depth              =18;
+}
+
+message Depth {
+	repeated Order Buy  =1;
+  	repeated Order Sell =2;
+}
+
+
+message Order {
+	uint32 Price = 1;
+	uint32 Quantity = 2;
+	uint32 Orders = 3;
+}
+
+
+
+

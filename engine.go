@@ -45,9 +45,9 @@ func Write() {
 	wg.Wait()
 }
 
-func readMap() (map[uint32]string, error) {
+func readMap() (map[uint32]*storage.TickerMap, error) {
 
-	tokenNameMap := map[uint32]string{}
+	tokenNameMap := map[uint32]*storage.TickerMap{}
 	b, err := os.ReadFile("./binary/map_" + time.Now().Format("20060102") + ".proto.zstd")
 	if err != nil {
 		return nil, err
@@ -66,45 +66,44 @@ func readMap() (map[uint32]string, error) {
 			return nil, err
 		}
 		for _, ts := range data.TickerMap {
-			tokenNameMap[ts.Token] = ts.TradingSymbol
+			tokenNameMap[ts.Token] = ts
 		}
 	}
 	return tokenNameMap, nil
 }
 
-func Read() {
-	tokenNameMap, err := readMap()
+func Read(date time.Time) {
+	tokenMap, err := readMap()
 	if err != nil {
 		log.Panicf("%s", err)
-		return
 	}
 
-	b, err := os.ReadFile("./binary/data_" + time.Now().Format("20060102") + ".bin.zstd")
+	b, err := os.ReadFile("./binary/data_" + date.Format("20060102") + ".bin.zstd")
 	if err != nil {
 		log.Panicf("%s", err)
-		return
 	}
-	for len(b) > 8 {
-		sizeOfPacket := binary.BigEndian.Uint64(b[0:8])
-		packet, err := decompress(b[8 : sizeOfPacket+8])
-		if err != nil {
-			log.Panicf("%s", err)
-			return
-		}
-		b = b[sizeOfPacket+8:]
-		t := &kite.TickerClient{
-			TickerChan: make(chan kite.KiteTicker),
-		}
 
-		go func(t chan kite.KiteTicker) {
-			for ticker := range t {
-				ticker.TradingSymbol = tokenNameMap[ticker.Token]
-				spew.Dump(ticker)
+	t := &kite.TickerClient{
+		TickerChan: make(chan kite.KiteTicker),
+	}
+
+	go func() {
+		for len(b) > 8 {
+			sizeOfPacket := binary.BigEndian.Uint64(b[0:8])
+			packet, err := decompress(b[8 : sizeOfPacket+8])
+			if err != nil {
+				log.Panicf("%s", err)
 			}
-		}(t.TickerChan)
-
-		t.ParseBinary(packet)
-
+			t.ParseBinary(packet)
+			b = b[sizeOfPacket+8:]
+		}
+	}()
+	if err != nil {
+		log.Panicf("%s", err)
+	}
+	for ticker := range t.TickerChan {
+		ticker.TradingSymbol = tokenMap[ticker.Token].TradingSymbol
+		spew.Dump(ticker, tokenMap[ticker.Token])
 	}
 
 }
@@ -219,8 +218,16 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 
 	for name, data := range *kite.BrokerInstrumentTokens {
 		iMap.TickerMap = append(iMap.TickerMap, &storage.TickerMap{
-			Token:         data.Token,
-			TradingSymbol: name,
+			Token:          data.Token,
+			TradingSymbol:  name,
+			Exchange:       data.Exchange,
+			Name:           data.Name,
+			Expiry:         data.Expiry,
+			Strike:         float32(data.Strike),
+			TickSize:       float32(data.TickSize),
+			LotSize:        uint32(data.LotSize),
+			InstrumentType: data.InstrumentType,
+			Segment:        data.Segment,
 		})
 	}
 
