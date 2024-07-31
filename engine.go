@@ -203,7 +203,10 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 		}(k.TickerClients[i])
 		go func(t *kite.TickerClient) {
 			for message := range t.BinaryTickerChan {
-				appendWithDelimiter("./binary/data_bin_"+time.Now().Format("20060102")+".zstd", message)
+				bytesToSave := make([]byte, 2)
+				binary.BigEndian.PutUint16(bytes, uint16(len(message)))
+				bytesToSave = append(bytesToSave, message...)
+				appendWithDelimiter("./binary/data_bin_"+time.Now().Format("20060102")+".zstd", bytesToSave)
 
 				// appendToFile("./binary/data_"+time.Now().Format("20060102")+".bin", message)
 				data := &storage.Data{

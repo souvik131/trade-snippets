@@ -98,7 +98,8 @@ func (kite *Kite) GetWebSocketClient(ctx *context.Context, receiveBinaryTickers 
 		go func() {
 
 			for err := range kws.ErrorChan {
-				log.Printf("websocket client error : %v", err)
+				log.Panicf("websocket client error : %v", err)
+
 			}
 		}()
 		return kws, nil
