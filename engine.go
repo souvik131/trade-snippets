@@ -18,7 +18,6 @@ import (
 var instrumentsPerSocket = 3000.0
 var instrumentsPerRequest = 2000.0
 var dateFormat = "2006-01-02"
-var delimiter = []byte("\n---\n")
 
 func compress(input []byte) ([]byte, error) {
 	var b bytes.Buffer
@@ -58,47 +57,45 @@ func decompress(input []byte) ([]byte, error) {
 	return out.Bytes(), nil
 }
 
-func appendWithDelimiter(filename string, data []byte) error {
+func appendToFile(filename string, data []byte) error {
 
-	// Check if the file exists
-	fileExists := true
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		fileExists = false
+	compressedData, err := compress(data)
+	if err != nil {
+		log.Panicf("%s", err)
 	}
+
+	bytesToSave := make([]byte, 8)
+	binary.BigEndian.PutUint64(bytesToSave, uint64(len(compressedData)))
+	log.Println(binary.BigEndian.Uint16(bytesToSave), uint64(len(compressedData)))
+	bytesToSave = append(bytesToSave, compressedData...)
 
 	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
-
-	// If the file does not exist, write the initial delimiter
-	if !fileExists {
-		_, err = file.Write(delimiter)
-		if err != nil {
-			return err
-		}
-	}
-
-	_, err = file.Write(data)
+	_, err = file.Write(bytesToSave)
 	if err != nil {
 		return err
 	}
-
-	_, err = file.Write(delimiter)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
-func saveFile(filePath string, binaryData []byte) error {
+func saveFile(filePath string, data []byte) error {
+	compressedData, err := compress(data)
+	if err != nil {
+		log.Panicf("%s", err)
+	}
+
+	bytesToSave := make([]byte, 8)
+	binary.BigEndian.PutUint64(bytesToSave, uint64(len(compressedData)))
+	log.Println(binary.BigEndian.Uint16(bytesToSave), uint64(len(compressedData)))
+	bytesToSave = append(bytesToSave, compressedData...)
 	file, err := os.Create(filePath)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
-	_, err = file.Write(binaryData)
+	_, err = file.Write(bytesToSave)
 	return err
 }
 
@@ -118,10 +115,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 	if err != nil {
 		log.Panicf("%s", err)
 	}
-	bytes, err = compress(bytes)
-	if err != nil {
-		log.Panicf("%s", err)
-	}
+
 	saveFile("./binary/map_proto_"+time.Now().Format("20060102")+".zstd", bytes)
 
 	log.Println("Instrument Map successfully written to file")
@@ -203,10 +197,8 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 		}(k.TickerClients[i])
 		go func(t *kite.TickerClient) {
 			for message := range t.BinaryTickerChan {
-				bytesToSave := make([]byte, 2)
-				binary.BigEndian.PutUint16(bytes, uint16(len(message)))
-				bytesToSave = append(bytesToSave, message...)
-				appendWithDelimiter("./binary/data_bin_"+time.Now().Format("20060102")+".zstd", bytesToSave)
+
+				appendToFile("./binary/data_bin_"+time.Now().Format("20060102")+".zstd", message)
 
 				// appendToFile("./binary/data_"+time.Now().Format("20060102")+".bin", message)
 				data := &storage.Data{
@@ -315,11 +307,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 				if err != nil {
 					log.Panicf("%s", err)
 				}
-				bytes, err = compress(bytes)
-				if err != nil {
-					log.Panicf("%s", err)
-				}
-				appendWithDelimiter("./binary/data_proto_"+time.Now().Format("20060102")+".zstd", bytes)
+				appendToFile("./binary/data_proto_"+time.Now().Format("20060102")+".zstd", bytes)
 
 			}
 		}(k.TickerClients[i])
