@@ -2,7 +2,7 @@ package main
 
 func main() {
 
-	Read()
-	// Write()
+	// Read()
+	Write()
 	// Host()
 }
