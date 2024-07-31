@@ -6,9 +6,14 @@ import (
 	"encoding/binary"
 	"log"
 	"math"
+	"net/http"
 	"os"
+	"path/filepath"
+	"sync"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+	"github.com/joho/godotenv"
 	"github.com/klauspost/compress/zstd"
 	"github.com/souvik131/trade-snippets/kite"
 	"github.com/souvik131/trade-snippets/storage"
@@ -16,8 +21,117 @@ import (
 )
 
 var instrumentsPerSocket = 3000.0
-var instrumentsPerRequest = 2000.0
+var instrumentsPerRequest = 3000.0
 var dateFormat = "2006-01-02"
+
+func Write() {
+	ctx := context.Background()
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
+
+	var k = &kite.Kite{}
+	err = k.Login(&ctx)
+	if err != nil {
+		log.Panicf("%s", err)
+		return
+	}
+
+	Serve(&ctx, k)
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	wg.Wait()
+}
+
+func readMap() (map[uint32]string, error) {
+
+	tokenNameMap := map[uint32]string{}
+	b, err := os.ReadFile("./binary/map_" + time.Now().Format("20060102") + ".proto.zstd")
+	if err != nil {
+		return nil, err
+	}
+	for len(b) > 8 {
+		sizeOfPacket := binary.BigEndian.Uint64(b[0:8])
+		packet, err := decompress(b[8 : sizeOfPacket+8])
+		if err != nil {
+			return nil, err
+		}
+		b = b[sizeOfPacket+8:]
+
+		data := &storage.Map{}
+		err = proto.Unmarshal(packet, data)
+		if err != nil {
+			return nil, err
+		}
+		for _, ts := range data.TickerMap {
+			tokenNameMap[ts.Token] = ts.TradingSymbol
+		}
+	}
+	return tokenNameMap, nil
+}
+
+func Read() {
+	tokenNameMap, err := readMap()
+	if err != nil {
+		log.Panicf("%s", err)
+		return
+	}
+
+	b, err := os.ReadFile("./binary/data_" + time.Now().Format("20060102") + ".bin.zstd")
+	if err != nil {
+		log.Panicf("%s", err)
+		return
+	}
+	for len(b) > 8 {
+		sizeOfPacket := binary.BigEndian.Uint64(b[0:8])
+		packet, err := decompress(b[8 : sizeOfPacket+8])
+		if err != nil {
+			log.Panicf("%s", err)
+			return
+		}
+		b = b[sizeOfPacket+8:]
+		t := &kite.TickerClient{
+			TickerChan: make(chan kite.KiteTicker),
+		}
+
+		go func(t chan kite.KiteTicker) {
+			for ticker := range t {
+				ticker.TradingSymbol = tokenNameMap[ticker.Token]
+				spew.Dump(ticker)
+			}
+		}(t.TickerChan)
+
+		t.ParseBinary(packet)
+
+	}
+
+}
+
+func Host() {
+
+	dir := "./binary"
+	fileServer := http.FileServer(http.Dir(dir))
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			indexPath := filepath.Join(dir, "index.html")
+			if _, err := os.Stat(indexPath); os.IsNotExist(err) {
+				http.NotFound(w, r)
+				return
+			}
+			http.ServeFile(w, r, indexPath)
+		} else {
+			fileServer.ServeHTTP(w, r)
+		}
+	})
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Serving files from %s on http://localhost:8080", absDir)
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
 
 func compress(input []byte) ([]byte, error) {
 	var b bytes.Buffer
@@ -66,7 +180,6 @@ func appendToFile(filename string, data []byte) error {
 
 	bytesToSave := make([]byte, 8)
 	binary.BigEndian.PutUint64(bytesToSave, uint64(len(compressedData)))
-	log.Println(binary.BigEndian.Uint16(bytesToSave), uint64(len(compressedData)))
 	bytesToSave = append(bytesToSave, compressedData...)
 
 	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -116,7 +229,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 		log.Panicf("%s", err)
 	}
 
-	saveFile("./binary/map_proto_"+time.Now().Format("20060102")+".zstd", bytes)
+	saveFile("./binary/map_"+time.Now().Format("20060102")+".proto.zstd", bytes)
 
 	log.Println("Instrument Map successfully written to file")
 
@@ -198,9 +311,8 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 		go func(t *kite.TickerClient) {
 			for message := range t.BinaryTickerChan {
 
-				appendToFile("./binary/data_bin_"+time.Now().Format("20060102")+".zstd", message)
+				appendToFile("./binary/data_"+time.Now().Format("20060102")+".bin.zstd", message)
 
-				// appendToFile("./binary/data_"+time.Now().Format("20060102")+".bin", message)
 				data := &storage.Data{
 					Tickers: []*storage.Ticker{},
 				}
@@ -303,11 +415,11 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 
 					}
 				}
-				bytes, err := proto.Marshal(data)
-				if err != nil {
-					log.Panicf("%s", err)
-				}
-				appendToFile("./binary/data_proto_"+time.Now().Format("20060102")+".zstd", bytes)
+				// bytes, err := proto.Marshal(data)
+				// if err != nil {
+				// 	log.Panicf("%s", err)
+				// }
+				// appendToFile("./binary/data_proto_"+time.Now().Format("20060102")+".zstd", bytes)
 
 			}
 		}(k.TickerClients[i])
