@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"fmt"
 	"log"
 	"math"
 	"net/http"
@@ -12,6 +13,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/joho/godotenv"
 	"github.com/klauspost/compress/zstd"
@@ -23,6 +28,7 @@ import (
 var instrumentsPerSocket = 3000.0
 var instrumentsPerRequest = 3000.0
 var dateFormat = "2006-01-02"
+var dateFormatConcise = "20060102"
 
 func Write() {
 	ctx := context.Background()
@@ -48,7 +54,7 @@ func Write() {
 func readMap() (map[uint32]*storage.TickerMap, error) {
 
 	tokenNameMap := map[uint32]*storage.TickerMap{}
-	b, err := os.ReadFile("./binary/map_" + time.Now().Format("20060102") + ".proto.zstd")
+	b, err := os.ReadFile("./binary/map_" + time.Now().Format(dateFormatConcise) + ".proto.zstd")
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +84,7 @@ func Read(date time.Time) {
 		log.Panicf("%s", err)
 	}
 
-	b, err := os.ReadFile("./binary/data_" + date.Format("20060102") + ".bin.zstd")
+	b, err := os.ReadFile("./binary/index_" + date.Format(dateFormatConcise) + ".bin.zstd")
 	if err != nil {
 		log.Panicf("%s", err)
 	}
@@ -192,6 +198,7 @@ func appendToFile(filename string, data []byte) error {
 	}
 	return nil
 }
+
 func saveFile(filePath string, data []byte) error {
 	compressedData, err := compress(data)
 	if err != nil {
@@ -236,7 +243,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 		log.Panicf("%s", err)
 	}
 
-	saveFile("./binary/map_"+time.Now().Format("20060102")+".proto.zstd", bytes)
+	saveFile("./binary/map_"+time.Now().Format(dateFormatConcise)+".proto.zstd", bytes)
 
 	log.Println("Instrument Map successfully written to file")
 
@@ -250,16 +257,8 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 			data.Name == "FINNIFTY" ||
 			data.Name == "MIDCPNIFTY" ||
 			data.Name == "BANKEX" ||
-			data.Name == "SENSEX"
-
-		//isNotIndex := data.Name != "NIFTY" &&
-		//	data.Name == "BANKNIFTY" &&
-		//	data.Name == "FINNIFTY" &&
-		//	data.Name == "MIDCPNIFTY" &&
-		//	data.Name == "BANKEX" &&
-		//	data.Name == "SENSEX" &&
-		//	data.Name == "SENSEX50" &&
-		//	data.Name == "NIFTYNXT50"
+			data.Name == "SENSEX50" ||
+			data.Name == "NIFTYNXT50"
 
 		if data.Expiry != "" && (data.Exchange == "NFO" || data.Exchange == "BFO") && isIndex {
 			name := data.Exchange + ":" + data.Name
@@ -318,7 +317,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 		go func(t *kite.TickerClient) {
 			for message := range t.BinaryTickerChan {
 
-				appendToFile("./binary/data_"+time.Now().Format("20060102")+".bin.zstd", message)
+				appendToFile("./binary/index_"+time.Now().Format(dateFormatConcise)+".bin.zstd", message)
 
 				data := &storage.Data{
 					Tickers: []*storage.Ticker{},
@@ -426,7 +425,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 				// if err != nil {
 				// 	log.Panicf("%s", err)
 				// }
-				// appendToFile("./binary/data_proto_"+time.Now().Format("20060102")+".zstd", bytes)
+				// appendToFile("./binary/index_proto_"+time.Now().Format(dateFormatConcise)+".zstd", bytes)
 
 			}
 		}(k.TickerClients[i])
@@ -436,4 +435,60 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 	}
 	log.Println("All subscribed")
 
+}
+
+func Upload(t time.Time) error {
+
+	key := os.Getenv("TA_DO_KEY")
+	secret := os.Getenv("TA_DO_SECRET")
+	bucket := os.Getenv("TA_DO_BUCKET")
+	endpoint := os.Getenv("TA_DO_ENDPOINT")
+	region := os.Getenv("TA_DO_REGION")
+	s3Config := &aws.Config{
+		Credentials:      credentials.NewStaticCredentials(key, secret, ""),
+		Endpoint:         aws.String(endpoint),
+		Region:           aws.String(region),
+		S3ForcePathStyle: aws.Bool(false), // // Configures to use subdomain/virtual calling format. Depending on your version, alternatively use o.UsePathStyle = false
+	}
+
+	sess, err := session.NewSession(s3Config)
+	if err != nil {
+		return err
+	}
+
+	uploader := s3manager.NewUploader(sess)
+
+	mapFile := "./binary/map_" + t.Format(dateFormatConcise) + ".proto.zstd"
+	f, err := os.Open(mapFile)
+	if err != nil {
+		return fmt.Errorf("failed to open file %q, %v", mapFile, err)
+	}
+	result, err := uploader.Upload(&s3manager.UploadInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(mapFile),
+		Body:   f,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to upload file, %v", err)
+	}
+	fmt.Printf("file uploaded to, %s\n", aws.StringValue(&result.Location))
+	os.Remove(mapFile)
+
+	dataFile := "./binary/index_" + t.Format(dateFormatConcise) + ".bin.zstd"
+	f, err = os.Open(dataFile)
+	if err != nil {
+		return fmt.Errorf("failed to open file %q, %v", mapFile, err)
+	}
+	result, err = uploader.Upload(&s3manager.UploadInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(dataFile),
+		Body:   f,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to upload file, %v", err)
+	}
+	fmt.Printf("file uploaded to, %s\n", aws.StringValue(&result.Location))
+	os.Remove(dataFile)
+
+	return nil
 }
