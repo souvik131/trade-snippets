@@ -140,7 +140,8 @@ func Host() {
 
 func compress(input []byte) ([]byte, error) {
 	var b bytes.Buffer
-	encoder, err := zstd.NewWriter(&b)
+	bestLevel := zstd.WithEncoderLevel(zstd.SpeedBestCompression)
+	encoder, err := zstd.NewWriter(&b, bestLevel)
 	if err != nil {
 		return nil, err
 	}
