@@ -11,7 +11,7 @@ var (
 )
 
 func main() {
-	cronJob.AddFunc("0 0 4-5 * *", func() {
+	cronJob.AddFunc("0 0 4-8 * *", func() {
 		Upload(time.Now())
 	})
 	Write()
