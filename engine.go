@@ -448,7 +448,7 @@ func Upload(t time.Time) error {
 		Credentials:      credentials.NewStaticCredentials(key, secret, ""),
 		Endpoint:         aws.String(endpoint),
 		Region:           aws.String(region),
-		S3ForcePathStyle: aws.Bool(false), // // Configures to use subdomain/virtual calling format. Depending on your version, alternatively use o.UsePathStyle = false
+		S3ForcePathStyle: aws.Bool(false),
 	}
 
 	sess, err := session.NewSession(s3Config)
