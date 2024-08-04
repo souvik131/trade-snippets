@@ -84,7 +84,7 @@ func (kite *Kite) GetWebSocketClient(ctx *context.Context, receiveBinaryTickers 
 
 	loginType := strings.TrimSpace(os.Getenv("TA_KITE_LOGINTYPE"))
 	if loginType == "" {
-		log.Fatalln("Please ensure .env file has all the creds including TA_LOGINTYPE")
+		log.Fatalln("Please ensure .env file has all the creds including TA_KITE_LOGINTYPE")
 	}
 
 	k["LoginType"] = loginType
