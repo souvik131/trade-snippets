@@ -13,7 +13,6 @@ var TickSize = map[string]float64{}
 var ExpiryDatesByScript = map[string][]time.Time{}
 var (
 	BrokerInstrumentTokens = &InstrumentSymbolMap{}
-	allMonthlyExpiries     = make(map[string]bool)
 	DateMap                = map[string]string{
 		"JAN": "01",
 		"FEB": "02",
