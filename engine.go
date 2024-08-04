@@ -116,7 +116,7 @@ func Read(date time.Time) {
 
 func Host() {
 
-	dir := "./binary"
+	dir := "./web"
 	fileServer := http.FileServer(http.Dir(dir))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
@@ -438,13 +438,14 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 
 }
 
-func Upload(t time.Time) error {
+func Upload() error {
 
 	key := os.Getenv("TA_DO_KEY")
 	secret := os.Getenv("TA_DO_SECRET")
 	bucket := os.Getenv("TA_DO_BUCKET")
 	endpoint := os.Getenv("TA_DO_ENDPOINT")
 	region := os.Getenv("TA_DO_REGION")
+	log.Println(region)
 	s3Config := &aws.Config{
 		Credentials:      credentials.NewStaticCredentials(key, secret, ""),
 		Endpoint:         aws.String(endpoint),
@@ -459,37 +460,37 @@ func Upload(t time.Time) error {
 
 	uploader := s3manager.NewUploader(sess)
 
-	mapFile := "./binary/map_" + t.Format(dateFormatConcise) + ".proto.zstd"
-	f, err := os.Open(mapFile)
-	if err != nil {
-		return fmt.Errorf("failed to open file %q, %v", mapFile, err)
-	}
-	result, err := uploader.Upload(&s3manager.UploadInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(mapFile),
-		Body:   f,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to upload file, %v", err)
-	}
-	fmt.Printf("file uploaded to, %s\n", aws.StringValue(&result.Location))
-	os.Remove(mapFile)
+	fileDir := "./binary"
 
-	dataFile := "./binary/index_" + t.Format(dateFormatConcise) + ".bin.zstd"
-	f, err = os.Open(dataFile)
+	file, err := os.Open(fileDir)
 	if err != nil {
-		return fmt.Errorf("failed to open file %q, %v", mapFile, err)
+		return err
 	}
-	result, err = uploader.Upload(&s3manager.UploadInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(dataFile),
-		Body:   f,
-	})
+	defer file.Close()
+
+	files, err := os.ReadDir(fileDir)
 	if err != nil {
-		return fmt.Errorf("failed to upload file, %v", err)
+		return err
 	}
-	fmt.Printf("file uploaded to, %s\n", aws.StringValue(&result.Location))
-	os.Remove(dataFile)
+
+	for _, f := range files {
+
+		mapFile := fileDir + "/" + f.Name()
+		f, err := os.Open(mapFile)
+		if err != nil {
+			return fmt.Errorf("failed to open file %q, %v", mapFile, err)
+		}
+		result, err := uploader.Upload(&s3manager.UploadInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(mapFile),
+			Body:   f,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to upload file, %v", err)
+		}
+		fmt.Printf("file uploaded to, %s\n", aws.StringValue(&result.Location))
+		os.Remove(mapFile)
+	}
 
 	return nil
 }

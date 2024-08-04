@@ -82,7 +82,7 @@ func (kite *Kite) oauth(c *gin.Context) {
 func (kite *Kite) GetWebSocketClient(ctx *context.Context, receiveBinaryTickers bool) (*TickerClient, error) {
 	k := *(*kite).Creds
 
-	loginType := strings.TrimSpace(os.Getenv("TA_LOGINTYPE"))
+	loginType := strings.TrimSpace(os.Getenv("TA_KITE_LOGINTYPE"))
 	if loginType == "" {
 		log.Fatalln("Please ensure .env file has all the creds including TA_LOGINTYPE")
 	}
@@ -124,7 +124,7 @@ func (kite *Kite) Login(ctx *context.Context) error {
 	(*kite).Creds = &Creds{}
 	k := *(*kite).Creds
 
-	loginType := strings.TrimSpace(os.Getenv("TA_LOGINTYPE"))
+	loginType := strings.TrimSpace(os.Getenv("TA_KITE_LOGINTYPE"))
 	if loginType == "" {
 		log.Fatalln("Please ensure .env  file has all the creds including TA_LOGINTYPE")
 	}
@@ -160,7 +160,7 @@ func (kite *Kite) Login(ctx *context.Context) error {
 func (kite *Kite) LoginWeb(ctx *context.Context) error {
 	k := *(*kite).Creds
 	for _, input := range webInputs {
-		val := strings.TrimSpace(os.Getenv("TA_" + strings.ToUpper(input)))
+		val := strings.TrimSpace(os.Getenv("TA_KITE_" + strings.ToUpper(input)))
 		if val == "" {
 			log.Fatalln("Please ensure .env  file has all the creds including ", "TA_"+strings.ToUpper(input))
 		}
@@ -255,7 +255,7 @@ func (kite *Kite) LoginWeb(ctx *context.Context) error {
 func (kite *Kite) LoginApi(ctx *context.Context) error {
 	k := *(*kite).Creds
 	for _, input := range apiInputs {
-		val := strings.TrimSpace(os.Getenv("TA_" + strings.ToUpper(input)))
+		val := strings.TrimSpace(os.Getenv("TA_KITE_" + strings.ToUpper(input)))
 		if val == "" {
 			log.Fatalln("Please ensure .env  file has all the creds including ", "TA_"+strings.ToUpper(input))
 		}

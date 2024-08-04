@@ -1,8 +1,9 @@
 package main
 
 import (
-	"time"
+	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/robfig/cron"
 )
 
@@ -11,11 +12,13 @@ var (
 )
 
 func main() {
-	cronJob.AddFunc("0 0 8 * *", func() {
-		Upload(time.Now())
+	if os.Getenv("TA_KITE_ID") == "" {
+		godotenv.Load()
+	}
+	cronJob.AddFunc("0 0 20 * *", func() {
+		Upload()
 	})
 	Write()
-
 	// Read(time.Now())
 	// Host()
 
