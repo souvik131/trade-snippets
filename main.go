@@ -15,7 +15,7 @@ func main() {
 	if os.Getenv("TA_KITE_ID") == "" {
 		godotenv.Load()
 	}
-	cronJob.AddFunc("20 20 * * *", func() {
+	cronJob.AddFunc(os.Getenv("TA_CRON_STRING"), func() {
 		Upload()
 	})
 	cronJob.Start()
