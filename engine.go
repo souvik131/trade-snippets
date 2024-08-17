@@ -21,6 +21,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/klauspost/compress/zstd"
 	"github.com/souvik131/trade-snippets/kite"
+	"github.com/souvik131/trade-snippets/notifications"
 	"github.com/souvik131/trade-snippets/storage"
 	"google.golang.org/protobuf/proto"
 )
@@ -29,8 +30,13 @@ var instrumentsPerSocket = 3000.0
 var instrumentsPerRequest = 3000.0
 var dateFormat = "2006-01-02"
 var dateFormatConcise = "20060102"
+var (
+	t = &notifications.Telegram{}
+)
 
 func Write() {
+
+	t.Send("Started Writing Feed Data")
 	ctx := context.Background()
 
 	err := godotenv.Load()
@@ -439,7 +445,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 }
 
 func Upload() error {
-
+	t.Send("Uploading Feed Data File")
 	key := os.Getenv("TA_DO_KEY")
 	secret := os.Getenv("TA_DO_SECRET")
 	bucket := os.Getenv("TA_DO_BUCKET")
