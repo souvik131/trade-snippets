@@ -506,6 +506,12 @@ func Upload() error {
 	for _, f := range files {
 
 		mapFile := fileDir + "/" + f.Name()
+		fileInfo, err := os.Stat(mapFile)
+		if err != nil {
+			return fmt.Errorf("failed to get file info %q, %v", mapFile, err)
+		}
+		fileSizeInMB := float64(fileInfo.Size()) / (1024 * 1024)
+		t.Send(fmt.Sprintf("%s file of %.2f MB\n", mapFile, fileSizeInMB))
 		f, err := os.Open(mapFile)
 		if err != nil {
 			return fmt.Errorf("failed to open file %q, %v", mapFile, err)
