@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,7 +18,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/joho/godotenv"
 	"github.com/klauspost/compress/zstd"
 	"github.com/souvik131/trade-snippets/kite"
@@ -57,10 +57,10 @@ func Write() {
 	wg.Wait()
 }
 
-func readMap() (map[uint32]*storage.TickerMap, error) {
+func readMap(dateStr string) (map[uint32]*storage.TickerMap, error) {
 
 	tokenNameMap := map[uint32]*storage.TickerMap{}
-	b, err := os.ReadFile("./binary/map_" + time.Now().Format(dateFormatConcise) + ".proto.zstd")
+	b, err := os.ReadFile("./binary/map_" + dateStr + ".proto.zstd")
 	if err != nil {
 		return nil, err
 	}
@@ -84,13 +84,13 @@ func readMap() (map[uint32]*storage.TickerMap, error) {
 	return tokenNameMap, nil
 }
 
-func Read(date time.Time) {
-	tokenMap, err := readMap()
+func Read(dateStr string) {
+	tokenMap, err := readMap(dateStr)
 	if err != nil {
 		log.Panicf("%s", err)
 	}
 
-	b, err := os.ReadFile("./binary/index_" + date.Format(dateFormatConcise) + ".bin.zstd")
+	b, err := os.ReadFile("./binary/index_" + dateStr + ".bin.zstd")
 	if err != nil {
 		log.Panicf("%s", err)
 	}
@@ -113,9 +113,32 @@ func Read(date time.Time) {
 	if err != nil {
 		log.Panicf("%s", err)
 	}
-	for ticker := range t.TickerChan {
-		ticker.TradingSymbol = tokenMap[ticker.Token].TradingSymbol
-		spew.Dump(ticker, tokenMap[ticker.Token])
+	counter := 0
+	start := time.Now()
+	timeElapsed := time.Microsecond
+	indices := map[string]bool{}
+	for {
+		select {
+		case ticker := <-t.TickerChan:
+			counter++
+			if t, ok := tokenMap[ticker.Token]; ok {
+				ticker.TradingSymbol = t.TradingSymbol
+				if counter%1000000 == 0 {
+					fmt.Println(counter, "records", ticker.ExchangeTimestamp, ticker.TradingSymbol, "Bid :", ticker.Depth.Buy[0].Price, "Offer :", ticker.Depth.Sell[0].Price)
+				}
+				indices[t.Name] = true
+			}
+			timeElapsed = time.Since(start)
+		case <-time.After(time.Second):
+
+			keys := make([]string, 0, len(indices))
+
+			for key := range indices {
+				keys = append(keys, key)
+			}
+			fmt.Println("Read", counter, "F&O records of ("+strings.Join(keys, ", ")+")", "in", timeElapsed)
+			log.Panic("exiting")
+		}
 	}
 
 }
@@ -264,8 +287,9 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 			data.Name == "FINNIFTY" ||
 			data.Name == "MIDCPNIFTY" ||
 			data.Name == "BANKEX" ||
+			data.Name == "NIFTYNXT50" ||
 			data.Name == "SENSEX50" ||
-			data.Name == "NIFTYNXT50"
+			data.Name == "SENSEX"
 
 		if data.Expiry != "" && (data.Exchange == "NFO" || data.Exchange == "BFO") && isIndex {
 			name := data.Exchange + ":" + data.Name

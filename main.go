@@ -20,7 +20,7 @@ func main() {
 	})
 	cronJob.Start()
 	Write()
-	// Read(time.Now())
+	// Read(time.Now().Format(dateFormatConcise))
 	// Host()
 
 }
