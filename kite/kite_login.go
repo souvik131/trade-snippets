@@ -44,12 +44,10 @@ func (kite *Kite) oauth(c *gin.Context) {
 	payload := fmt.Sprintf("api_key=%v&request_token=%v&checksum=%v", k["ApiKey"], k["RequestToken"], GetSha256(k["ApiKey"]+k["RequestToken"]+k["ApiSecret"]))
 	body, code, _, err := requests.PostWithCookies(&ctx, "https://api.kite.trade/session/token", payload, headers, "")
 	if err != nil {
-		log.Println(err)
 		c.Data(http.StatusFailedDependency, "text/plain; charset=utf-8", []byte("failed"))
 		return
 	}
 	if code != 200 {
-		log.Printf("failed %v", code)
 		c.Data(http.StatusFailedDependency, "text/plain; charset=utf-8", []byte("failed"))
 		return
 	}
@@ -99,7 +97,6 @@ func (kite *Kite) GetWebSocketClient(ctx *context.Context, receiveBinaryTickers 
 
 			for err := range kws.ErrorChan {
 				log.Panicf("websocket client error : %v", err)
-
 			}
 		}()
 		return kws, nil

@@ -12,10 +12,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/souvik131/trade-snippets/notifications"
 	"github.com/souvik131/trade-snippets/ws"
 )
 
-const HeartBeatIntervalInSeconds float64 = 30
+var (
+	t = &notifications.Telegram{}
+)
+
+const HeartBeatIntervalInSeconds float64 = 20
 const BufferSize int = 1000
 
 func GetWebsocketClientForWeb(ctx *context.Context, id string, token string, receiveBinaryTickers bool) (*TickerClient, error) {
@@ -33,7 +38,7 @@ func GetWebsocketClientForAPI(ctx *context.Context, token string, receiveBinaryT
 
 func getWebsocketClient(ctx *context.Context, rawQuery string, receiveBinaryTickers bool) (*TickerClient, error) {
 	log.Printf("websocket : start")
-
+	go t.Send("websocket : start")
 	k := &TickerClient{
 		Client: &ws.Client{
 			URL: &url.URL{
@@ -80,6 +85,7 @@ func (k *TickerClient) Connect(ctx *context.Context) error {
 		return fmt.Errorf("%v", respBody)
 	}
 	log.Printf("websocket : client ready")
+	go t.Send("websocket : client ready")
 	err = k.Client.Read(ctx)
 	if err != nil {
 		return err
@@ -91,6 +97,7 @@ func (k *TickerClient) Serve(ctx *context.Context) {
 
 	<-time.After(time.Millisecond)
 	log.Println("websocket : serve")
+	go t.Send("websocket : serve")
 
 	ticker := time.NewTicker(time.Second)
 
@@ -126,6 +133,7 @@ func (k *TickerClient) Reconnect(ctx *context.Context) error {
 	err := k.Close(ctx)
 	if err != nil {
 		log.Printf("websocket : attempted to close, got response -> %v", err)
+		go t.Send("websocket : reconnecting")
 	}
 	err = k.Connect(ctx)
 	if err != nil {
@@ -265,7 +273,6 @@ func (k *TickerClient) checkHeartBeat(ctx *context.Context) bool {
 func (k *TickerClient) writeTextRequest(ctx *context.Context, req *Request) error {
 	message, err := json.Marshal(req)
 
-	// log.Printf("send: %s", message)
 	if err != nil {
 		return err
 	}
@@ -396,7 +403,8 @@ func (k *TickerClient) onTextMessage(reader *ws.Reader) {
 		}
 		switch m.Type {
 		case "instruments_meta":
-			// log.Printf("websocket : connected")
+			log.Printf("websocket : connected")
+			t.Send("websocket : connected")
 			k.ConnectChan <- struct{}{}
 		case "error":
 			k.ErrorChan <- m.Data
