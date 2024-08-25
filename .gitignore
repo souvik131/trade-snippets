@@ -2,4 +2,4 @@
 .env
 .DS_Store
 build
-nats
+nats/data

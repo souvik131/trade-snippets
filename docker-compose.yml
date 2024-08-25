@@ -7,8 +7,11 @@ services:
       - 127.0.0.1:8222:8222
     volumes:
       - ./nats/data:/data
+      - ./nats/config:/etc/nats
     command:
       - "--js"
+      - "-c"
+      - "/etc/nats/nats.conf"
     restart: always
 
   fetch:
