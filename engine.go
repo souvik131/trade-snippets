@@ -264,7 +264,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 
 	_, err = js.CreateOrUpdateStream(*ctx, jetstream.StreamConfig{
 		Name:              "FEED",
-		Subjects:          []string{"FEED_FUT.*.*.*", "FEED_OPT.*.*.*.*.*.*"},
+		Subjects:          []string{"FEED_FUT.*.*.*", "FEED_OPT.*.*.*.*.*"},
 		MaxMsgsPerSubject: 1,
 		Storage:           jetstream.MemoryStorage,
 	})
@@ -492,7 +492,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 							if nc.Status() != nats.CONNECTED {
 								continue
 							} else {
-								js.PublishAsync(fmt.Sprintf("FEED_OPT.%v.%v.%v.%v.%v.%v", tokenData.Exchange, tokenData.Name, tokenData.Expiry, tokenData.InstrumentType, tokenData.Strike, tokenData.InstrumentType), bytes)
+								js.PublishAsync(fmt.Sprintf("FEED_OPT.%v.%v.%v.%v.%v", tokenData.Exchange, tokenData.Name, tokenData.Expiry, tokenData.Strike, tokenData.InstrumentType), bytes)
 
 							}
 						}
