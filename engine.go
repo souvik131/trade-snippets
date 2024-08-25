@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math"
@@ -20,6 +21,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/joho/godotenv"
 	"github.com/klauspost/compress/zstd"
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
 	"github.com/souvik131/trade-snippets/kite"
 	"github.com/souvik131/trade-snippets/notifications"
 	"github.com/souvik131/trade-snippets/storage"
@@ -249,12 +252,34 @@ func saveFile(filePath string, data []byte) error {
 }
 
 func Serve(ctx *context.Context, k *kite.Kite) {
+	log.Println(os.Getenv("NATS_URI"))
+	nc, err := nats.Connect(os.Getenv("NATS_URI"))
+	if err != nil {
+		log.Panic(err)
+	}
+	js, err := jetstream.New(nc)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	_, err = js.CreateOrUpdateStream(*ctx, jetstream.StreamConfig{
+		Name:              "FEED",
+		Subjects:          []string{"FEED_FUT.*.*.*", "FEED_OPT.*.*.*.*.*.*"},
+		MaxMsgsPerSubject: 1,
+		Storage:           jetstream.MemoryStorage,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tokenTradingsymbolMap := map[uint32]*storage.TickerMap{}
+
 	iMap := &storage.Map{
 		TickerMap: []*storage.TickerMap{},
 	}
 
 	for name, data := range *kite.BrokerInstrumentTokens {
-		iMap.TickerMap = append(iMap.TickerMap, &storage.TickerMap{
+		tokenTradingsymbolMap[data.Token] = &storage.TickerMap{
 			Token:          data.Token,
 			TradingSymbol:  name,
 			Exchange:       data.Exchange,
@@ -265,7 +290,8 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 			LotSize:        uint32(data.LotSize),
 			InstrumentType: data.InstrumentType,
 			Segment:        data.Segment,
-		})
+		}
+		iMap.TickerMap = append(iMap.TickerMap, tokenTradingsymbolMap[data.Token])
 	}
 
 	bytes, err := proto.Marshal(iMap)
@@ -366,6 +392,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 						packetSize := binary.BigEndian.Uint16(message[0:2])
 						packet := kite.Packet(message[2 : packetSize+2])
 						values := packet.ParseBinary(int(math.Min(64, float64(len(packet)))))
+
 						ticker := &storage.Ticker{
 							Depth: &storage.Depth{
 								Buy:  []*storage.Order{},
@@ -447,6 +474,27 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 						}
 						if len(message) > int(packetSize+2) {
 							message = message[packetSize+2:]
+						}
+						bytes, err := json.Marshal(ticker)
+						if err != nil {
+							log.Panicf("%s", err)
+						}
+						tokenData := tokenTradingsymbolMap[ticker.Token]
+						if tokenData.InstrumentType == "FUT" {
+							if nc.Status() != nats.CONNECTED {
+								continue
+							} else {
+								js.PublishAsync(fmt.Sprintf("FEED_FUT.%v.%v.%v", tokenData.Exchange, tokenData.Name, tokenData.Expiry), bytes)
+
+							}
+
+						} else if tokenData.InstrumentType == "CE" || tokenData.InstrumentType == "PE" {
+							if nc.Status() != nats.CONNECTED {
+								continue
+							} else {
+								js.PublishAsync(fmt.Sprintf("FEED_OPT.%v.%v.%v.%v.%v.%v", tokenData.Exchange, tokenData.Name, tokenData.Expiry, tokenData.InstrumentType, tokenData.Strike, tokenData.InstrumentType), bytes)
+
+							}
 						}
 						data.Tickers = append(data.Tickers, ticker)
 
