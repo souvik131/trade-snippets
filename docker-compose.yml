@@ -6,7 +6,7 @@ services:
       - 127.0.0.1:4222:4222
       - 127.0.0.1:8222:8222
     volumes:
-      - ./services/logs/nats/data:/data
+      - ./nats/data:/data
     command:
       - "--js"
     restart: always
