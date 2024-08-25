@@ -36,7 +36,7 @@ var (
 
 func Write() {
 
-	// t.Send("Started Writing Feed Data")
+	t.Send("Started Writing Feed Data")
 	ctx := context.Background()
 
 	err := godotenv.Load()
