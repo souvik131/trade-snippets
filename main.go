@@ -22,5 +22,6 @@ func main() {
 	Write()
 	// Read(time.Now().Format(dateFormatConcise))
 	// Host()
+	// Subscribe()
 
 }
