@@ -554,26 +554,29 @@ func Upload() error {
 	for _, f := range files {
 
 		mapFile := fileDir + "/" + f.Name()
-		fileInfo, err := os.Stat(mapFile)
-		if err != nil {
-			return fmt.Errorf("failed to get file info %q, %v", mapFile, err)
+
+		if strings.Contains(f.Name(), "_"+time.Now().Format(dateFormatConcise)) {
+			fileInfo, err := os.Stat(mapFile)
+			if err != nil {
+				return fmt.Errorf("failed to get file info %q, %v", mapFile, err)
+			}
+			fileSizeInMB := float64(fileInfo.Size()) / (1024 * 1024)
+			t.Send(fmt.Sprintf("%s file of %.2f MB\n", mapFile, fileSizeInMB))
+			f, err := os.Open(mapFile)
+			if err != nil {
+				return fmt.Errorf("failed to open file %q, %v", mapFile, err)
+			}
+			result, err := uploader.Upload(&s3manager.UploadInput{
+				Bucket: aws.String(bucket),
+				Key:    aws.String(mapFile),
+				Body:   f,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to upload file, %v", err)
+			}
+			fmt.Printf("file uploaded to, %s\n", aws.StringValue(&result.Location))
+			os.Remove(mapFile)
 		}
-		fileSizeInMB := float64(fileInfo.Size()) / (1024 * 1024)
-		t.Send(fmt.Sprintf("%s file of %.2f MB\n", mapFile, fileSizeInMB))
-		f, err := os.Open(mapFile)
-		if err != nil {
-			return fmt.Errorf("failed to open file %q, %v", mapFile, err)
-		}
-		result, err := uploader.Upload(&s3manager.UploadInput{
-			Bucket: aws.String(bucket),
-			Key:    aws.String(mapFile),
-			Body:   f,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to upload file, %v", err)
-		}
-		fmt.Printf("file uploaded to, %s\n", aws.StringValue(&result.Location))
-		os.Remove(mapFile)
 	}
 
 	return nil
