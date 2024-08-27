@@ -6,7 +6,6 @@ env GOOS="linux" GOARCH="arm" go build -o linux .;
 cp mac build/;
 cp win.exe build/;
 cp linux build/;
-cp creds.txt build/;
 rm mac
 rm linux
 rm win.exe
