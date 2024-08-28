@@ -33,9 +33,17 @@ var instrumentsPerSocket = 3000.0
 var instrumentsPerRequest = 3000.0
 var dateFormat = "2006-01-02"
 var dateFormatConcise = "20060102"
-var (
-	t = &notifications.Telegram{}
-)
+var t = &notifications.Telegram{}
+var IndexMap = map[string]string{
+	"NIFTY BANK":        "BANKNIFTY",
+	"NIFTY 50":          "NIFTY",
+	"NIFTY FIN SERVICE": "FINNIFTY",
+	"NIFTY MID SELECT":  "MIDCPNIFTY",
+	"SENSEX":            "SENSEX",
+	"BANKEX":            "BANKEX",
+	"SNSX50":            "SENSEX50",
+	"NIFTY NEXT 50":     "NIFTYNXT50",
+}
 
 func Write() {
 
@@ -264,7 +272,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 
 	_, err = js.CreateOrUpdateStream(*ctx, jetstream.StreamConfig{
 		Name:              "FEED",
-		Subjects:          []string{"FEED_FUT.*.*.*", "FEED_OPT.*.*.*.*.*"},
+		Subjects:          []string{"FEED_EQ.*.*", "FEED_FUT.*.*.*", "FEED_OPT.*.*.*.*.*"},
 		MaxMsgsPerSubject: 1,
 		Storage:           jetstream.MemoryStorage,
 	})
@@ -306,6 +314,8 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 	k.TickerClients = []*kite.TickerClient{}
 
 	expiryByName := map[string]string{}
+
+	allTokens := []string{}
 	for _, data := range *kite.BrokerInstrumentTokens {
 
 		isIndex := data.Name == "NIFTY" ||
@@ -335,11 +345,11 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 			} else {
 				expiryByName[name] = data.Expiry
 			}
+		} else if _, ok := IndexMap[data.Name]; ok {
+			allTokens = append(allTokens, data.TradingSymbol)
 		}
 
 	}
-
-	allTokens := []string{}
 
 	for _, data := range *kite.BrokerInstrumentTokens {
 		if exp, ok := expiryByName[data.Exchange+":"+data.Name]; ok && exp == data.Expiry && data.Expiry != "" {
@@ -493,6 +503,13 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 								continue
 							} else {
 								js.PublishAsync(fmt.Sprintf("FEED_OPT.%v.%v.%v.%v.%v", tokenData.Exchange, tokenData.Name, tokenData.Expiry, tokenData.Strike, tokenData.InstrumentType), bytes)
+
+							}
+						} else if tokenData.InstrumentType == "EQ" {
+							if nc.Status() != nats.CONNECTED {
+								continue
+							} else {
+								js.PublishAsync(fmt.Sprintf("FEED_EQ.%v.%v", tokenData.Exchange, tokenData.Name), bytes)
 
 							}
 						}

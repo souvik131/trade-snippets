@@ -57,15 +57,6 @@ var (
 	}
 )
 
-var IndexMap = map[string]string{
-	"BANKNIFTY":  "NIFTY BANK",
-	"NIFTY":      "NIFTY 50",
-	"FINNIFTY":   "NIFTY FIN SERVICE",
-	"MIDCPNIFTY": "NIFTY MID SELECT",
-	"SENSEX":     "SENSEX",
-	"BANKEX":     "BANKEX",
-}
-
 const (
 	YYYYMMDD = "2006-01-02"
 )
