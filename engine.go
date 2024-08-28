@@ -43,6 +43,7 @@ var IndexMap = map[string]string{
 	"BANKEX":            "BANKEX",
 	"SNSX50":            "SENSEX50",
 	"NIFTY NEXT 50":     "NIFTYNXT50",
+	"INDIA VIX":         "VIX",
 }
 
 func Write() {
