@@ -345,7 +345,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 			} else {
 				expiryByName[name] = data.Expiry
 			}
-		} else if _, ok := IndexMap[data.Name]; ok {
+		} else if _, ok := IndexMap[data.TradingSymbol]; ok && data.InstrumentType == "EQ" {
 			allTokens = append(allTokens, data.TradingSymbol)
 		}
 
