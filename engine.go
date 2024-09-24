@@ -19,6 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/joho/godotenv"
 	"github.com/klauspost/compress/zstd"
 	"github.com/nats-io/nats.go"
@@ -135,9 +136,10 @@ func Read(dateStr string) {
 			counter++
 			if t, ok := tokenMap[ticker.Token]; ok {
 				ticker.TradingSymbol = t.TradingSymbol
-				if counter%1000000 == 0 {
-					fmt.Println(counter, "records", ticker.ExchangeTimestamp, ticker.TradingSymbol, "Bid :", ticker.Depth.Buy[0].Price, "Offer :", ticker.Depth.Sell[0].Price)
-				}
+				// if counter%1000000 == 0 {
+				// 	fmt.Println(counter, "records", ticker.ExchangeTimestamp, ticker.TradingSymbol, "Bid :", ticker.Depth.Buy[0].Price, "Offer :", ticker.Depth.Sell[0].Price)
+				// }
+				spew.Dump(ticker)
 				indices[t.Name] = true
 			}
 			timeElapsed = time.Since(start)

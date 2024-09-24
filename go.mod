@@ -5,13 +5,13 @@ go 1.20
 require (
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/bot-api/telegram v0.0.0-20170115211335-b7abf87c449e
+	github.com/davecgh/go-spew v1.1.1
 	github.com/gin-gonic/gin v1.10.0
 	github.com/gocarina/gocsv v0.0.0-20240520201108-78e41c74b4b1
 	github.com/joho/godotenv v1.5.1
 	github.com/klauspost/compress v1.17.6
 	github.com/nats-io/nats.go v1.37.0
 	github.com/pquerna/otp v1.4.0
-	github.com/robfig/cron v1.2.0
 	github.com/valyala/fasthttp v1.52.0
 	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948
 	google.golang.org/protobuf v1.34.1
