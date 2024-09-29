@@ -261,8 +261,7 @@ func saveFile(filePath string, data []byte) error {
 }
 
 func Serve(ctx *context.Context, k *kite.Kite) {
-	log.Println(os.Getenv("NATS_URI"))
-	nc, err := nats.Connect(os.Getenv("NATS_URI"))
+	nc, err := nats.Connect(os.Getenv("NATS_WRITE_URI"))
 	if err != nil {
 		log.Panic(err)
 	}

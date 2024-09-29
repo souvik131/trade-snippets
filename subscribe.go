@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"os"
 	"sync"
 	"time"
 
@@ -25,7 +26,7 @@ func RandStringRunes(n int) string {
 }
 func Subscribe() {
 
-	nc, err := nats.Connect(nats.DefaultURL)
+	nc, err := nats.Connect(os.Getenv("NATS_READ_URI"))
 	if err != nil {
 		log.Panic(err)
 	}
