@@ -77,7 +77,7 @@ type KiteTicker struct {
 }
 
 type ParquetKiteTicker struct {
-	TradingSymbol       string    `parquet:"name=tradingSymbol, type=FIXED_LEN_BYTE_ARRAY, length=30"`
+	TradingSymbol       string    `parquet:"name=tradingSymbol, type=BYTE_ARRAY, encoding=PLAIN_DICTIONARY"`
 	LastPrice           float64   `parquet:"name=lastPrice, type=DOUBLE"`
 	LastTradedQuantity  int64     `parquet:"name=lastTradedQty, type=INT64"`
 	AverageTradedPrice  float64   `parquet:"name=avgTradedPrice, type=DOUBLE"`
@@ -92,8 +92,8 @@ type ParquetKiteTicker struct {
 	OIHigh              int64     `parquet:"name=oiHigh, type=INT64"`
 	OILow               int64     `parquet:"name=oiLow, type=INT64"`
 	PriceChange         float64   `parquet:"name=priceChange, type=DOUBLE"`
-	LastTradedTimestamp string    `parquet:"name=lastTradedTimestamp, type=FIXED_LEN_BYTE_ARRAY, length=50"`
-	ExchangeTimestamp   string    `parquet:"name=excahngeTimestamp, type=FIXED_LEN_BYTE_ARRAY, length=50"`
+	LastTradedTimestamp string    `parquet:"name=lastTradedTimestamp, type=BYTE_ARRAY, encoding=PLAIN_DICTIONARY"`
+	ExchangeTimestamp   string    `parquet:"name=excahngeTimestamp, type=BYTE_ARRAY, encoding=PLAIN_DICTIONARY"`
 	PriceBuy            []float64 `parquet:"name=buyPrices, type=DOUBLE, repetitiontype=REPEATED"`
 	QuantityBuy         []int64   `parquet:"name=buyQtys, type=INT64, repetitiontype=REPEATED"`
 	OrdersBuy           []int64   `parquet:"name=buyOrders, type=INT64, repetitiontype=REPEATED"`

@@ -28,6 +28,7 @@ import (
 	"github.com/souvik131/trade-snippets/storage"
 	"github.com/xitongsys/parquet-go-source/local"
 	"github.com/xitongsys/parquet-go/parquet"
+	"github.com/xitongsys/parquet-go/reader"
 	"github.com/xitongsys/parquet-go/writer"
 	"google.golang.org/protobuf/proto"
 )
@@ -99,7 +100,37 @@ func readMap(dateStr string) (map[uint32]*storage.TickerMap, error) {
 	return tokenNameMap, nil
 }
 
-func Read(dateStr string) {
+func ReadParquet(dateStr string) {
+	fr, err := local.NewLocalFileReader("./binary/index_" + dateStr + ".parquet")
+	if err != nil {
+		log.Println("Can't open file")
+		return
+	}
+
+	pr, err := reader.NewParquetReader(fr, new(kite.ParquetKiteTicker), 4)
+	if err != nil {
+		log.Println("Can't create parquet reader", err)
+		return
+	}
+	num := int(pr.GetNumRows())
+	log.Println(num)
+	for i := 0; i < num/10; i++ {
+		if i%2 == 0 {
+			pr.SkipRows(10) //skip 10 rows
+			continue
+		}
+		stus := make([]kite.ParquetKiteTicker, 10) //read 10 rows
+		if err = pr.Read(&stus); err != nil {
+			log.Println("Read error", err)
+		}
+		log.Println(stus)
+	}
+
+	pr.ReadStop()
+	fr.Close()
+}
+
+func BinaryToParquet(dateStr string) {
 	tokenMap, err := readMap(dateStr)
 	if err != nil {
 		log.Panicf("%s", err)
@@ -133,7 +164,7 @@ func Read(dateStr string) {
 	timeElapsed := time.Microsecond
 	indices := map[string]bool{}
 
-	fw, err := local.NewLocalFileWriter("index_" + dateStr + ".parquet")
+	fw, err := local.NewLocalFileWriter("./binary/index_" + dateStr + ".parquet")
 	if err != nil {
 		log.Println("Can't create local file", err)
 		return
@@ -149,7 +180,7 @@ func Read(dateStr string) {
 	pw.RowGroupSize = 128 * 1024 * 1024 //128M
 	pw.PageSize = 8 * 1024              //8K
 	pw.CompressionType = parquet.CompressionCodec_ZSTD
-
+	// count := 0
 	for {
 		select {
 		case ticker := <-t.TickerChan:
@@ -204,10 +235,21 @@ func Read(dateStr string) {
 				}
 				if err = pw.Write(p); err != nil {
 					log.Println("Write error", err)
-				} else {
-					log.Println("Write success", p.TradingSymbol)
 				}
+				// else {
+				// 	log.Println("Write success", p.TradingSymbol, p.LastTradedTimestamp)
+				// }
 				indices[t.Name] = true
+				// if count == 100 {
+				// 	if err = pw.WriteStop(); err != nil {
+				// 		log.Println("WriteStop error", err)
+				// 		return
+				// 	}
+				// 	log.Println("Write Finished")
+				// 	fw.Close()
+				// 	log.Panic("exiting")
+				// }
+				// count++
 			}
 			timeElapsed = time.Since(start)
 		case <-time.After(time.Second):
@@ -218,13 +260,14 @@ func Read(dateStr string) {
 				keys = append(keys, key)
 			}
 			fmt.Println("Read", counter, "F&O records of ("+strings.Join(keys, ", ")+")", "in", timeElapsed)
-			log.Panic("exiting")
+
 			if err = pw.WriteStop(); err != nil {
 				log.Println("WriteStop error", err)
 				return
 			}
 			log.Println("Write Finished")
 			fw.Close()
+			log.Panic("exiting")
 		}
 	}
 

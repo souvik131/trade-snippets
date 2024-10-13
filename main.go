@@ -2,6 +2,6 @@ package main
 
 func main() {
 
-	Read("20240923")
-
+	BinaryToParquet("20240923")
+	// ReadParquet("20240923")
 }
