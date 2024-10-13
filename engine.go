@@ -19,7 +19,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/joho/godotenv"
 	"github.com/klauspost/compress/zstd"
 	"github.com/nats-io/nats.go"
@@ -27,6 +26,9 @@ import (
 	"github.com/souvik131/trade-snippets/kite"
 	"github.com/souvik131/trade-snippets/notifications"
 	"github.com/souvik131/trade-snippets/storage"
+	"github.com/xitongsys/parquet-go-source/local"
+	"github.com/xitongsys/parquet-go/parquet"
+	"github.com/xitongsys/parquet-go/writer"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -130,6 +132,24 @@ func Read(dateStr string) {
 	start := time.Now()
 	timeElapsed := time.Microsecond
 	indices := map[string]bool{}
+
+	fw, err := local.NewLocalFileWriter("index_" + dateStr + ".parquet")
+	if err != nil {
+		log.Println("Can't create local file", err)
+		return
+	}
+
+	//write
+	pw, err := writer.NewParquetWriter(fw, new(kite.ParquetKiteTicker), 4)
+	if err != nil {
+		log.Println("Can't create parquet writer", err)
+		return
+	}
+
+	pw.RowGroupSize = 128 * 1024 * 1024 //128M
+	pw.PageSize = 8 * 1024              //8K
+	pw.CompressionType = parquet.CompressionCodec_ZSTD
+
 	for {
 		select {
 		case ticker := <-t.TickerChan:
@@ -139,7 +159,54 @@ func Read(dateStr string) {
 				// if counter%1000000 == 0 {
 				// 	fmt.Println(counter, "records", ticker.ExchangeTimestamp, ticker.TradingSymbol, "Bid :", ticker.Depth.Buy[0].Price, "Offer :", ticker.Depth.Sell[0].Price)
 				// }
-				spew.Dump(ticker)
+
+				PriceBuy := []float64{}
+				QuantityBuy := []int64{}
+				OrdersBuy := []int64{}
+				PriceSell := []float64{}
+				QuantitySell := []int64{}
+				OrdersSell := []int64{}
+				for _, order := range ticker.Depth.Buy {
+					PriceBuy = append(PriceBuy, order.Price)
+					QuantityBuy = append(QuantityBuy, int64(order.Quantity))
+					OrdersBuy = append(OrdersBuy, int64(order.Orders))
+				}
+				for _, order := range ticker.Depth.Sell {
+					PriceSell = append(PriceSell, order.Price)
+					QuantitySell = append(QuantitySell, int64(order.Quantity))
+					OrdersSell = append(OrdersSell, int64(order.Orders))
+				}
+
+				p := kite.ParquetKiteTicker{
+					TradingSymbol:       ticker.TradingSymbol,
+					LastPrice:           ticker.LastPrice,
+					LastTradedQuantity:  int64(ticker.LastTradedQuantity),
+					AverageTradedPrice:  ticker.AverageTradedPrice,
+					VolumeTraded:        int64(ticker.VolumeTraded),
+					TotalBuy:            int64(ticker.TotalBuy),
+					TotalSell:           int64(ticker.TotalSell),
+					High:                ticker.High,
+					Low:                 ticker.Low,
+					Open:                ticker.Open,
+					Close:               ticker.Close,
+					OI:                  int64(ticker.OI),
+					OIHigh:              int64(ticker.OIHigh),
+					OILow:               int64(ticker.OILow),
+					PriceChange:         ticker.PriceChange,
+					LastTradedTimestamp: ticker.LastTradedTimestamp.String(),
+					ExchangeTimestamp:   ticker.ExchangeTimestamp.String(),
+					PriceBuy:            PriceBuy,
+					QuantityBuy:         QuantityBuy,
+					OrdersBuy:           OrdersBuy,
+					PriceSell:           PriceSell,
+					QuantitySell:        QuantitySell,
+					OrdersSell:          OrdersSell,
+				}
+				if err = pw.Write(p); err != nil {
+					log.Println("Write error", err)
+				} else {
+					log.Println("Write success", p.TradingSymbol)
+				}
 				indices[t.Name] = true
 			}
 			timeElapsed = time.Since(start)
@@ -152,6 +219,12 @@ func Read(dateStr string) {
 			}
 			fmt.Println("Read", counter, "F&O records of ("+strings.Join(keys, ", ")+")", "in", timeElapsed)
 			log.Panic("exiting")
+			if err = pw.WriteStop(); err != nil {
+				log.Println("WriteStop error", err)
+				return
+			}
+			log.Println("Write Finished")
+			fw.Close()
 		}
 	}
 

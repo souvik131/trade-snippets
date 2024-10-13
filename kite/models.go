@@ -75,6 +75,32 @@ type KiteTicker struct {
 	ExchangeTimestamp   time.Time
 	Depth               Depth
 }
+
+type ParquetKiteTicker struct {
+	TradingSymbol       string    `parquet:"name=tradingSymbol, type=FIXED_LEN_BYTE_ARRAY, length=30"`
+	LastPrice           float64   `parquet:"name=lastPrice, type=DOUBLE"`
+	LastTradedQuantity  int64     `parquet:"name=lastTradedQty, type=INT64"`
+	AverageTradedPrice  float64   `parquet:"name=avgTradedPrice, type=DOUBLE"`
+	VolumeTraded        int64     `parquet:"name=volume, type=INT64"`
+	TotalBuy            int64     `parquet:"name=totalBuy, type=INT64"`
+	TotalSell           int64     `parquet:"name=totalSell, type=INT64"`
+	High                float64   `parquet:"name=high, type=DOUBLE"`
+	Low                 float64   `parquet:"name=low, type=DOUBLE"`
+	Open                float64   `parquet:"name=open, type=DOUBLE"`
+	Close               float64   `parquet:"name=close, type=DOUBLE"`
+	OI                  int64     `parquet:"name=oi, type=INT64"`
+	OIHigh              int64     `parquet:"name=oiHigh, type=INT64"`
+	OILow               int64     `parquet:"name=oiLow, type=INT64"`
+	PriceChange         float64   `parquet:"name=priceChange, type=DOUBLE"`
+	LastTradedTimestamp string    `parquet:"name=lastTradedTimestamp, type=FIXED_LEN_BYTE_ARRAY, length=50"`
+	ExchangeTimestamp   string    `parquet:"name=excahngeTimestamp, type=FIXED_LEN_BYTE_ARRAY, length=50"`
+	PriceBuy            []float64 `parquet:"name=buyPrices, type=DOUBLE, repetitiontype=REPEATED"`
+	QuantityBuy         []int64   `parquet:"name=buyQtys, type=INT64, repetitiontype=REPEATED"`
+	OrdersBuy           []int64   `parquet:"name=buyOrders, type=INT64, repetitiontype=REPEATED"`
+	PriceSell           []float64 `parquet:"name=sellPrices, type=DOUBLE, repetitiontype=REPEATED"`
+	QuantitySell        []int64   `parquet:"name=sellQtys, type=INT64, repetitiontype=REPEATED"`
+	OrdersSell          []int64   `parquet:"name=sellOrders, type=INT64, repetitiontype=REPEATED"`
+}
 type Creds map[string]string
 type Kite struct {
 	Creds         *Creds
