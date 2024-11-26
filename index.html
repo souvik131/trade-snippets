@@ -166,8 +166,11 @@
         connect() {
           this.updateStatus("connecting");
           console.log("Connecting to WebSocket server...");
+          const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+          const domain = window.location.host; // Gets the domain and port if any
+          const wsUrl = `${protocol}://${domain}/ws`;
 
-          this.ws = new WebSocket("ws://localhost:8080/ws");
+          this.ws = new WebSocket(wsUrl);
           this.ws.binaryType = "arraybuffer";
 
           this.ws.onopen = () => {
