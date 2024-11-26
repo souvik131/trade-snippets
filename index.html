@@ -8,9 +8,43 @@
       body {
         font-family: monospace;
         margin: 0;
-        padding: 20px;
+        padding: 10px;
         background-color: #000;
         color: #fff;
+      }
+
+      .header-container {
+        position: sticky;
+        top: 0;
+        background-color: #000;
+        z-index: 1;
+      }
+
+      .status-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 5px 10px;
+        margin-bottom: 5px;
+        background-color: #000;
+      }
+
+      .market-status {
+        color: #888;
+        font-size: 12px;
+        padding: 5px 10px;
+        background-color: #333;
+        border-radius: 4px;
+      }
+
+      .table-container {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .table-content {
+        min-width: 980px; /* Minimum width to prevent column wrapping */
       }
 
       .stock-row {
@@ -26,10 +60,42 @@
         font-weight: bold;
         color: #888;
         border-bottom: 2px solid #444;
-        position: sticky;
-        top: 0;
         background-color: #000;
-        z-index: 1;
+      }
+
+      @media screen and (max-width: 1200px) {
+        .stock-row {
+          grid-template-columns: 80px 80px 80px 160px 160px 60px 160px;
+          gap: 15px;
+          font-size: 14px;
+        }
+        .table-content {
+          min-width: 800px;
+        }
+      }
+
+      @media screen and (max-width: 600px) {
+        body {
+          padding: 5px;
+        }
+
+        .stock-row {
+          font-size: 12px;
+          gap: 10px;
+        }
+
+        .status-bar {
+          padding: 3px 5px;
+        }
+
+        .market-status {
+          font-size: 10px;
+          padding: 3px 6px;
+        }
+
+        .bid-ask {
+          gap: 5px;
+        }
       }
 
       .header > div {
@@ -37,6 +103,9 @@
         user-select: none;
         display: flex;
         align-items: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .header > div:hover {
@@ -79,13 +148,9 @@
       }
 
       #status {
-        position: fixed;
-        top: 10px;
-        right: 10px;
         padding: 5px 10px;
         border-radius: 4px;
         font-size: 12px;
-        z-index: 2;
       }
 
       .connected {
@@ -110,30 +175,34 @@
         margin-left: 10px;
       }
 
-      #market-status {
-        position: fixed;
-        top: 40px;
-        right: 10px;
-        padding: 5px 10px;
-        border-radius: 4px;
-        font-size: 12px;
-        background-color: #333;
-        z-index: 2;
+      @media screen and (max-width: 600px) {
+        #status {
+          font-size: 10px;
+          padding: 3px 6px;
+        }
       }
     </style>
   </head>
   <body>
-    <div id="status" class="disconnected">Disconnected</div>
-    <div id="market-status">Market Closed</div>
-    <div id="app">
-      <div class="stock-row header">
-        <div data-sort="name" class="sort-icon sort-asc">Stock</div>
-        <div data-sort="future" class="sort-icon">Future</div>
-        <div data-sort="strike" class="sort-icon">Strike</div>
-        <div data-sort="ce" class="sort-icon">Call Bid / Ask</div>
-        <div data-sort="pe" class="sort-icon">Put Bid / Ask</div>
-        <div data-sort="lot" class="sort-icon">Lot</div>
-        <div data-sort="exposure" class="sort-icon">Exposure</div>
+    <div class="header-container">
+      <div class="status-bar">
+        <div id="status" class="disconnected">Disconnected</div>
+        <div class="market-status">Market Closed</div>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <div class="table-content">
+        <div class="stock-row header">
+          <div data-sort="name" class="sort-icon sort-asc">Stock</div>
+          <div data-sort="future" class="sort-icon">Future</div>
+          <div data-sort="strike" class="sort-icon">Strike</div>
+          <div data-sort="ce" class="sort-icon">Call B/A</div>
+          <div data-sort="pe" class="sort-icon">Put B/A</div>
+          <div data-sort="lot" class="sort-icon">Lot</div>
+          <div data-sort="exposure" class="sort-icon">Exp</div>
+        </div>
+        <div id="app"></div>
       </div>
     </div>
 
@@ -142,7 +211,7 @@
         constructor() {
           this.app = document.getElementById("app");
           this.status = document.getElementById("status");
-          this.marketStatus = document.getElementById("market-status");
+          this.marketStatus = document.querySelector(".market-status");
           this.stockData = new Map();
           this.decoder = new TextDecoder();
           this.reconnectAttempts = 0;
