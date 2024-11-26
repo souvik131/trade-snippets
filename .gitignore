@@ -1,2 +1,4 @@
 data*.bin
 .env
+*.zstd
+*.parquet

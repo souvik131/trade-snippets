@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Market Data</title>
+    <style>
+      body {
+        font-family: monospace;
+        margin: 0;
+        padding: 20px;
+        background-color: #000;
+        color: #fff;
+      }
+
+      .stock-row {
+        display: grid;
+        grid-template-columns: 100px 100px 100px 200px 200px 80px;
+        gap: 20px;
+        padding: 10px;
+        border-bottom: 1px solid #333;
+        align-items: center;
+      }
+
+      .header {
+        font-weight: bold;
+        color: #888;
+        border-bottom: 2px solid #444;
+        position: sticky;
+        top: 0;
+        background-color: #000;
+        z-index: 1;
+      }
+
+      .bid-ask {
+        display: flex;
+        gap: 10px;
+      }
+
+      .bid {
+        color: #4caf50;
+      }
+
+      .ask {
+        color: #f44336;
+      }
+
+      .lot-size {
+        color: #888;
+      }
+
+      #status {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        z-index: 2;
+      }
+
+      .connected {
+        background-color: #4caf50;
+      }
+
+      .disconnected {
+        background-color: #f44336;
+      }
+
+      .connecting {
+        background-color: #ffc107;
+      }
+
+      .stale {
+        opacity: 0.5;
+      }
+
+      .timestamp {
+        font-size: 0.8em;
+        color: #666;
+        margin-left: 10px;
+      }
+
+      #market-status {
+        position: fixed;
+        top: 40px;
+        right: 10px;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        background-color: #333;
+        z-index: 2;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="status" class="disconnected">Disconnected</div>
+    <div id="market-status">Market Closed</div>
+    <div id="app">
+      <div class="stock-row header">
+        <div>Stock</div>
+        <div>Future</div>
+        <div>Strike</div>
+        <div>Call B/A</div>
+        <div>Put B/A</div>
+        <div>Lot</div>
+      </div>
+    </div>
+
+    <script>
+      class MarketDataUI {
+        constructor() {
+          this.app = document.getElementById("app");
+          this.status = document.getElementById("status");
+          this.marketStatus = document.getElementById("market-status");
+          this.stockData = new Map();
+          this.decoder = new TextDecoder();
+          this.reconnectAttempts = 0;
+          this.maxReconnectAttempts = 5;
+          this.reconnectDelay = 1000;
+          this.connect();
+          this.startStaleDataCheck();
+        }
+
+        startStaleDataCheck() {
+          setInterval(() => this.checkStaleData(), 1000);
+        }
+
+        checkStaleData() {
+          const now = new Date();
+          const marketOpen =
+            now.getHours() >= 9 &&
+            (now.getHours() < 15 ||
+              (now.getHours() == 15 && now.getMinutes() < 30));
+          this.marketStatus.textContent = marketOpen
+            ? "Market Open"
+            : "Market Closed";
+
+          this.stockData.forEach((stock, stockName) => {
+            const row = document.getElementById(`stock-${stockName}`);
+            if (!row) return;
+
+            const isStale = now - (stock.lastUpdate || 0) > 5000; // 5 seconds
+            row.classList.toggle("stale", isStale && marketOpen);
+          });
+        }
+
+        formatTimestamp(date) {
+          if (!date) return "";
+          const now = new Date();
+          const diff = now - date;
+
+          if (diff < 1000) return "just now";
+          if (diff < 60000) return `${Math.floor(diff / 1000)}s ago`;
+          if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+
+          return date.toLocaleTimeString();
+        }
+
+        updateStatus(state) {
+          this.status.className = state;
+          this.status.textContent =
+            state.charAt(0).toUpperCase() + state.slice(1);
+        }
+
+        connect() {
+          this.updateStatus("connecting");
+          console.log("Connecting to WebSocket server...");
+
+          this.ws = new WebSocket("ws://localhost:8080/ws");
+          this.ws.binaryType = "arraybuffer";
+
+          this.ws.onopen = () => {
+            console.log("WebSocket connected");
+            this.updateStatus("connected");
+            this.reconnectAttempts = 0;
+            this.reconnectDelay = 1000;
+          };
+
+          this.ws.onmessage = (event) => {
+            try {
+              this.handleBinaryMessage(event.data);
+            } catch (error) {
+              console.error("Error handling message:", error);
+            }
+          };
+
+          this.ws.onclose = (event) => {
+            console.log("WebSocket closed:", event.code, event.reason);
+            this.updateStatus("disconnected");
+            this.reconnect();
+          };
+
+          this.ws.onerror = (error) => {
+            console.error("WebSocket error:", error);
+            this.updateStatus("disconnected");
+          };
+        }
+
+        reconnect() {
+          if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+            console.log("Max reconnection attempts reached");
+            return;
+          }
+
+          this.reconnectAttempts++;
+          this.reconnectDelay *= 1.5; // Exponential backoff
+          console.log(
+            `Reconnecting in ${this.reconnectDelay}ms (attempt ${this.reconnectAttempts})`
+          );
+          setTimeout(() => this.connect(), this.reconnectDelay);
+        }
+
+        handleBinaryMessage(buffer) {
+          try {
+            const view = new DataView(buffer);
+            let offset = 0;
+
+            const numRecords = view.getUint16(offset, true);
+            offset += 2;
+
+            for (let i = 0; i < numRecords; i++) {
+              const nameLength = view.getUint8(offset);
+              offset += 1;
+              const stockName = this.decoder.decode(
+                new Uint8Array(buffer, offset, nameLength)
+              );
+              offset += nameLength;
+
+              const instType = view.getUint8(offset);
+              offset += 1;
+
+              const lastPrice = view.getFloat32(offset, true);
+              offset += 4;
+              const strikePrice = view.getFloat32(offset, true);
+              offset += 4;
+              const lotSize = view.getFloat32(offset, true);
+              offset += 4;
+              const bestBid = view.getFloat32(offset, true);
+              offset += 4;
+              const bestAsk = view.getFloat32(offset, true);
+              offset += 4;
+
+              const instrumentType = ["FUT", "CE", "PE"][instType];
+
+              this.updateData({
+                stockName,
+                instrumentType,
+                lastPrice,
+                strikePrice,
+                lotSize,
+                lastUpdate: new Date(),
+                depth: {
+                  buy: bestBid ? [{ price: bestBid }] : [],
+                  sell: bestAsk ? [{ price: bestAsk }] : [],
+                },
+              });
+            }
+          } catch (error) {
+            console.error("Error parsing binary message:", error);
+          }
+        }
+
+        updateData(data) {
+          if (!this.stockData.has(data.stockName)) {
+            this.stockData.set(data.stockName, {
+              future: null,
+              strike: null,
+              ce: null,
+              pe: null,
+              lotSize: data.lotSize,
+              lastUpdate: data.lastUpdate,
+            });
+            this.createStockRow(data.stockName);
+          }
+
+          const stock = this.stockData.get(data.stockName);
+          const row = document.getElementById(`stock-${data.stockName}`);
+          if (!row) return;
+
+          stock.lastUpdate = data.lastUpdate;
+
+          if (data.instrumentType === "FUT") {
+            if (data.lastPrice > 0) {
+              stock.future = data.lastPrice;
+            }
+            if (data.lotSize > 0) {
+              stock.lotSize = data.lotSize;
+            }
+            this.updateRow(data.stockName);
+          } else {
+            if (data.instrumentType === "CE") {
+              stock.ce = this.getBestBidAsk(data.depth);
+              stock.strike = data.strikePrice;
+            } else if (data.instrumentType === "PE") {
+              stock.pe = this.getBestBidAsk(data.depth);
+              stock.strike = data.strikePrice;
+            }
+            this.updateRow(data.stockName);
+          }
+        }
+
+        getBestBidAsk(depth) {
+          if (!depth || (!depth.buy.length && !depth.sell.length)) {
+            return { bid: null, ask: null };
+          }
+
+          const bestBid = depth.buy.length > 0 ? depth.buy[0].price : null;
+          const bestAsk = depth.sell.length > 0 ? depth.sell[0].price : null;
+
+          return { bid: bestBid, ask: bestAsk };
+        }
+
+        createStockRow(stockName) {
+          console.log(`Creating row for ${stockName}`);
+          const row = document.createElement("div");
+          row.id = `stock-${stockName}`;
+          row.className = "stock-row";
+          row.innerHTML = `
+                    <div>${stockName}</div>
+                    <div class="future">-</div>
+                    <div class="strike">-</div>
+                    <div class="ce">-</div>
+                    <div class="pe">-</div>
+                    <div class="lot-size">-</div>
+                `;
+          this.app.appendChild(row);
+        }
+
+        updateRow(stockName) {
+          const row = document.getElementById(`stock-${stockName}`);
+          const stock = this.stockData.get(stockName);
+          if (!row || !stock) return;
+
+          const futureEl = row.querySelector(".future");
+          const strikeEl = row.querySelector(".strike");
+          const ceEl = row.querySelector(".ce");
+          const peEl = row.querySelector(".pe");
+          const lotEl = row.querySelector(".lot-size");
+
+          if (stock.future !== null && stock.future > 0) {
+            futureEl.textContent = stock.future.toFixed(2);
+          }
+
+          if (stock.strike !== null && stock.strike > 0) {
+            strikeEl.textContent = stock.strike.toFixed(2);
+          }
+
+          if (stock.ce) {
+            ceEl.innerHTML = `
+                        <div class="bid-ask">
+                            <span class="bid">${
+                              stock.ce.bid?.toFixed(2) || "-"
+                            }</span>
+                            <span class="ask">${
+                              stock.ce.ask?.toFixed(2) || "-"
+                            }</span>
+                        </div>
+                    `;
+          }
+
+          if (stock.pe) {
+            peEl.innerHTML = `
+                        <div class="bid-ask">
+                            <span class="bid">${
+                              stock.pe.bid?.toFixed(2) || "-"
+                            }</span>
+                            <span class="ask">${
+                              stock.pe.ask?.toFixed(2) || "-"
+                            }</span>
+                        </div>
+                    `;
+          }
+
+          if (stock.lotSize > 0) {
+            lotEl.textContent = stock.lotSize;
+          }
+        }
+      }
+
+      // Start the application
+      const app = new MarketDataUI();
+    </script>
+  </body>
+</html>

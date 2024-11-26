@@ -22,6 +22,7 @@ type Instrument struct {
 	TickSize       float64 `csv:"tick_size"`
 	Token          uint32  `csv:"instrument_token"`
 }
+
 type Message struct {
 	Type string      `json:"type"`
 	Data interface{} `json:"data"`
@@ -44,15 +45,18 @@ type TickerClient struct {
 	LtpTokens                  map[uint32]bool
 	HeartBeatIntervalInSeconds float64
 }
+
 type LimitOrder struct {
 	Price    float64
 	Quantity uint32
 	Orders   uint32
 }
+
 type Depth struct {
 	Buy  []LimitOrder
 	Sell []LimitOrder
 }
+
 type KiteTicker struct {
 	TradingSymbol       string
 	Token               uint32
@@ -74,7 +78,9 @@ type KiteTicker struct {
 	ExchangeTimestamp   time.Time
 	Depth               Depth
 }
+
 type Creds map[string]string
+
 type Kite struct {
 	Creds         *Creds
 	TickerClients []*TickerClient
@@ -117,29 +123,6 @@ type OrderPayload struct {
 	TrailingStopLoss  string `query:"trailing_stoploss"`
 }
 
-type Equity struct {
-	Net       float64 `json:"net"`
-	Available *struct {
-		Cash       float64 `json:"cash"`
-		Collateral float64 `json:"collateral"`
-	} `json:"available"`
-	Utilised *struct {
-		Debits float64 `json:"debits"`
-	} `json:"utilised"`
-}
-
-type ChargesOrderRequest struct {
-	OrderId         string  `json:"order_id"`
-	Variety         string  `json:"variety"`
-	Exchange        string  `json:"exchange"`
-	TradingSymbol   string  `json:"tradingsymbol"`
-	Product         string  `json:"product"`
-	Quantity        uint32  `json:"quantity"`
-	AveragePrice    float64 `json:"average_price"`
-	OrderType       string  `json:"order_type"`
-	TransactionType string  `json:"transaction_type"`
-}
-
 type Position struct {
 	TradingSymbol     string  `json:"tradingsymbol"`
 	Exchange          string  `json:"exchange"`
@@ -171,11 +154,13 @@ type Position struct {
 	DaySellPrice      float64 `json:"day_sell_price"`
 	DaySellValue      float64 `json:"day_sell_value"`
 }
+
 type OptionPrice struct {
 	Strike float64
 	Price  float64
 	Type   string
 }
+
 type Quote struct {
 	LastPrice float64 `json:"last_price"`
 	Depth     struct {
@@ -187,12 +172,14 @@ type Quote struct {
 		} `json:"sell"`
 	} `json:"depth"`
 }
+
 type QuoteResponsePayload struct {
 	Status    string            `json:"error"`
 	Message   string            `json:"message"`
 	ErrorType string            `json:"error_type"`
 	Data      map[string]*Quote `json:"data"`
 }
+
 type OrderResponsePayload struct {
 	Status    string `json:"error"`
 	Message   string `json:"message"`
@@ -201,6 +188,7 @@ type OrderResponsePayload struct {
 		OrderId string `json:"order_id"`
 	} `json:"data"`
 }
+
 type OrderStatus struct {
 	PlacedBy                string  `json:"placed_by"`
 	OrderId                 string  `json:"order_id"`
@@ -232,6 +220,18 @@ type OrderStatus struct {
 	Guid                    string  `json:"guid"`
 }
 
+type ChargesOrderRequest struct {
+	OrderId         string  `json:"order_id"`
+	Variety         string  `json:"variety"`
+	Exchange        string  `json:"exchange"`
+	TradingSymbol   string  `json:"tradingsymbol"`
+	Product         string  `json:"product"`
+	Quantity        uint32  `json:"quantity"`
+	AveragePrice    float64 `json:"average_price"`
+	OrderType       string  `json:"order_type"`
+	TransactionType string  `json:"transaction_type"`
+}
+
 type BrokerCharges struct {
 	Charges *struct {
 		Total float64 `json:"total"`
@@ -244,11 +244,13 @@ type BrokerChargesPayload struct {
 	ErrorType string           `json:"error_type"`
 	Data      []*BrokerCharges `json:"data"`
 }
+
 type CancellationPayload struct {
 	Status    string `json:"error"`
 	Message   string `json:"message"`
 	ErrorType string `json:"error_type"`
 }
+
 type OrdersResponsePayload struct {
 	Status    string         `json:"error"`
 	Message   string         `json:"message"`
@@ -303,4 +305,15 @@ type OrderFillConfig struct {
 	Attempts        int
 	TotalAttempts   int
 	TickSize        float64
+}
+
+type Equity struct {
+	Net       float64 `json:"net"`
+	Available *struct {
+		Cash       float64 `json:"cash"`
+		Collateral float64 `json:"collateral"`
+	} `json:"available"`
+	Utilised *struct {
+		Debits float64 `json:"debits"`
+	} `json:"utilised"`
 }
