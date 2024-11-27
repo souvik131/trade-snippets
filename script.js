@@ -19,6 +19,213 @@ class MarketDataUI {
     this.startStaleDataCheck();
   }
 
+  calculateImpliedVolatility(stock) {
+    if (!stock || !stock.ce || !stock.pe || !stock.future || !stock.expiry)
+      return null;
+
+    const ceMidPrice = (stock.ce.bid + stock.ce.ask) / 2;
+    const peMidPrice = (stock.pe.bid + stock.pe.ask) / 2;
+
+    const now = new Date();
+    const expiry = new Date(stock.expiry);
+    expiry.setHours(15, 30, 0, 0);
+
+    const totalTimeInSeconds = this.calculateTradingSeconds(now, expiry);
+    const leftTimeInSeconds = this.calculateTradingSeconds(now, expiry);
+
+    if (totalTimeInSeconds <= 0 || leftTimeInSeconds <= 0) return null;
+
+    const iv =
+      1.25 *
+      ((ceMidPrice + peMidPrice) / stock.future) *
+      Math.sqrt(totalTimeInSeconds / leftTimeInSeconds) *
+      100;
+
+    return iv;
+  }
+
+  calculateBidIv(stock) {
+    if (!stock || !stock.ce || !stock.pe || !stock.future || !stock.expiry)
+      return null;
+
+    const now = new Date();
+    const expiry = new Date(stock.expiry);
+    expiry.setHours(15, 30, 0, 0);
+
+    const totalTimeInSeconds = this.calculateTradingSeconds(now, expiry);
+    const leftTimeInSeconds = this.calculateTradingSeconds(now, expiry);
+
+    if (totalTimeInSeconds <= 0 || leftTimeInSeconds <= 0) return null;
+
+    const iv =
+      1.25 *
+      ((stock.ce.bid + stock.pe.bid) / stock.future) *
+      Math.sqrt(totalTimeInSeconds / leftTimeInSeconds) *
+      100;
+
+    return iv;
+  }
+
+  calculateAskIv(stock) {
+    if (!stock || !stock.ce || !stock.pe || !stock.future || !stock.expiry)
+      return null;
+
+    const now = new Date();
+    const expiry = new Date(stock.expiry);
+    expiry.setHours(15, 30, 0, 0);
+
+    const totalTimeInSeconds = this.calculateTradingSeconds(now, expiry);
+    const leftTimeInSeconds = this.calculateTradingSeconds(now, expiry);
+
+    if (totalTimeInSeconds <= 0 || leftTimeInSeconds <= 0) return null;
+
+    const iv =
+      1.25 *
+      ((stock.ce.ask + stock.pe.ask) / stock.future) *
+      Math.sqrt(totalTimeInSeconds / leftTimeInSeconds) *
+      100;
+
+    return iv;
+  }
+
+  calculateSpreadIV(stock) {
+    if (!stock || !stock.ce || !stock.pe) return null;
+    return (
+      (stock.ce.askIv - stock.ce.bidIv + (stock.pe.askIv - stock.pe.bidIv)) / 2
+    );
+  }
+
+  calculateSpreadIV(stock) {
+    if (!stock || !stock.ce || !stock.pe || !stock.future || !stock.expiry)
+      return null;
+
+    const bidIv = this.calculateBidIv(stock);
+    const askIv = this.calculateAskIv(stock);
+
+    if (bidIv === null || askIv === null) return null;
+
+    return askIv - bidIv;
+  }
+
+  calculateRV(stock) {
+    this.setupExpirySelect();
+    this.connect();
+    this.startStaleDataCheck();
+  }
+
+  calculateBidIv(stock) {
+    if (!stock || !stock.ce || !stock.pe || !stock.future || !stock.expiry)
+      return null;
+
+    const now = new Date();
+    const expiry = new Date(stock.expiry);
+    expiry.setHours(15, 30, 0, 0);
+
+    const totalTimeInSeconds = this.calculateAnnualTradingSeconds(); // Annual trading seconds
+    const leftTimeInSeconds = this.calculateRemainingTradingSeconds(
+      now,
+      expiry
+    ); // Time remaining until expiry
+    if (totalTimeInSeconds <= 0 || leftTimeInSeconds <= 0) return null;
+
+    const iv =
+      1.25 *
+      ((stock.ce.bid + stock.pe.bid) / stock.future) *
+      Math.sqrt(totalTimeInSeconds / leftTimeInSeconds) *
+      100;
+
+    return iv;
+  }
+
+  calculateAskIv(stock) {
+    if (!stock || !stock.ce || !stock.pe || !stock.future || !stock.expiry)
+      return null;
+
+    const now = new Date();
+    const expiry = new Date(stock.expiry);
+    expiry.setHours(15, 30, 0, 0);
+
+    const totalTimeInSeconds = this.calculateAnnualTradingSeconds(); // Annual trading seconds
+    const leftTimeInSeconds = this.calculateRemainingTradingSeconds(
+      now,
+      expiry
+    ); // Time remaining until expiry
+    if (totalTimeInSeconds <= 0 || leftTimeInSeconds <= 0) return null;
+
+    const iv =
+      1.25 *
+      ((stock.ce.ask + stock.pe.ask) / stock.future) *
+      Math.sqrt(totalTimeInSeconds / leftTimeInSeconds) *
+      100;
+
+    return iv;
+  }
+
+  // Calculate annual trading seconds assuming 252 trading days per year and 6.5 hours per trading day
+  calculateAnnualTradingSeconds() {
+    const tradingHoursPerDay = 6.5 * 3600; // 6.5 hours in seconds
+    const tradingDaysPerYear = 252; // Number of trading days in a year
+    return tradingHoursPerDay * tradingDaysPerYear;
+  }
+
+  calculateRemainingTradingSeconds(now, expiry) {
+    const tradingStartInSeconds = 9 * 3600 + 15 * 60; // 9:15 AM in seconds
+    const tradingEndInSeconds = 15 * 3600 + 30 * 60; // 3:30 PM in seconds
+    const tradingHoursPerDay = 6.5 * 3600; // 6.5 hours in seconds
+    let remainingSeconds = 0;
+
+    let currentDate = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate()
+    );
+
+    while (currentDate <= expiry) {
+      // If it's a weekday (Monday to Friday)
+      const dayOfWeek = currentDate.getDay();
+      if (dayOfWeek > 0 && dayOfWeek < 6) {
+        // 0=Sunday, 6=Saturday
+        if (
+          currentDate.toDateString() === now.toDateString() // Same day as "now"
+        ) {
+          const currentTimeInSeconds =
+            now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+
+          if (currentTimeInSeconds < tradingStartInSeconds) {
+            // If current time is before trading starts, add the full trading day
+            remainingSeconds += tradingHoursPerDay;
+          } else if (currentTimeInSeconds < tradingEndInSeconds) {
+            // If current time is during trading hours, add remaining time
+            remainingSeconds += tradingEndInSeconds - currentTimeInSeconds;
+          }
+        } else if (currentDate.toDateString() === expiry.toDateString()) {
+          // On expiry day, add only up to the expiry time (15:30)
+          remainingSeconds += tradingEndInSeconds;
+        } else {
+          // For other weekdays, add a full trading day
+          remainingSeconds += tradingHoursPerDay;
+        }
+      }
+
+      // Move to the next day
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return remainingSeconds;
+  }
+
+  calculateRV(stock) {
+    return (
+      Math.abs(this.calculateChange(stock.future, stock.futureClose)) *
+        Math.sqrt(252) || null
+    );
+  }
+
+  formatIV(value) {
+    if (value === null || isNaN(value)) return "".padStart(8);
+    return value.toFixed(2).padStart(8);
+  }
+
   setupSortingListeners() {
     const headers = document.querySelectorAll(".header > div");
     headers.forEach((header) => {
@@ -88,7 +295,7 @@ class MarketDataUI {
   }
 
   formatExpiry(expiry) {
-    if (!expiry) return "-".padStart(8);
+    if (!expiry) return "".padStart(8);
     const date = new Date(expiry);
     return date
       .toLocaleDateString("en-IN", {
@@ -101,7 +308,7 @@ class MarketDataUI {
   }
 
   formatIndianCurrency(number) {
-    if (!number || isNaN(number)) return "-".padStart(8);
+    if (!number || isNaN(number)) return "".padStart(8);
 
     const absNumber = Math.abs(number);
     let result;
@@ -116,7 +323,7 @@ class MarketDataUI {
   }
 
   formatVolume(number) {
-    if (!number || isNaN(number)) return "-".padStart(8);
+    if (!number || isNaN(number)) return "".padStart(8);
 
     const absNumber = Math.abs(number);
     let result;
@@ -138,20 +345,20 @@ class MarketDataUI {
   }
 
   formatChange(change) {
-    if (change === null) return "-".padStart(8);
+    if (change === null) return "".padStart(8);
     const formatted = change.toFixed(2).padStart(6);
     const color = change >= 0 ? "positive" : "negative";
     return `<span class="${color}">${formatted}%</span>`;
   }
 
   formatPrice(price) {
-    if (!price || isNaN(price)) return "-".padStart(8);
+    if (!price || isNaN(price)) return "".padStart(8);
     return price.toFixed(2).padStart(8);
   }
 
   formatBidAsk(bid, ask) {
-    const bidStr = bid ? bid.toFixed(2).padStart(6) : "-".padStart(6);
-    const askStr = ask ? ask.toFixed(2).padStart(6) : "-".padStart(6);
+    const bidStr = bid ? bid.toFixed(2).padStart(6) : "".padStart(6);
+    const askStr = ask ? ask.toFixed(2).padStart(6) : "".padStart(6);
     return `<div class="bid-ask"><span class="bid">${bidStr}</span><span class="ask">${askStr}</span></div>`;
   }
 
@@ -175,6 +382,11 @@ class MarketDataUI {
       )}</span><span class="ask">${"\u00A0".repeat(6)}</span></div></div>
       <div class="pe-oi">${"\u00A0".repeat(8)}</div>
       <div class="pe-vol">${"\u00A0".repeat(8)}</div>
+      <div class="bid-iv">${"\u00A0".repeat(8)}</div>
+      <div class="ask-iv">${"\u00A0".repeat(8)}</div>
+      <div class="spread-iv">${"\u00A0".repeat(8)}</div>
+      <div class="rv">${"\u00A0".repeat(8)}</div>
+      <div class="vrp">${"\u00A0".repeat(8)}</div>
       <div class="lot-size">${"\u00A0".repeat(8)}</div>
       <div class="exposure">${"\u00A0".repeat(8)}</div>
     `;
@@ -196,6 +408,11 @@ class MarketDataUI {
     const peEl = row.querySelector(".pe");
     const peOiEl = row.querySelector(".pe-oi");
     const peVolEl = row.querySelector(".pe-vol");
+    const bidIvEl = row.querySelector(".bid-iv");
+    const askIvEl = row.querySelector(".ask-iv");
+    const spreadIvEl = row.querySelector(".spread-iv");
+    const rvEl = row.querySelector(".rv");
+    const vrpEl = row.querySelector(".vrp");
     const lotEl = row.querySelector(".lot-size");
     const expEl = row.querySelector(".exposure");
 
@@ -215,19 +432,35 @@ class MarketDataUI {
 
     if (stock.ce) {
       ceEl.innerHTML = this.formatBidAsk(stock.ce.bid, stock.ce.ask);
-      ceOiEl.textContent = this.formatVolume(stock.ce.oi / stock.lotSize);
+      ceOiEl.textContent = this.formatVolume(
+        Math.round(stock.ce.oi / stock.lotSize)
+      );
       ceVolEl.textContent = this.formatVolume(
-        stock.ce.volumeTraded / stock.lotSize
+        Math.round(stock.ce.volumeTraded / stock.lotSize)
       );
     }
 
     if (stock.pe) {
       peEl.innerHTML = this.formatBidAsk(stock.pe.bid, stock.pe.ask);
-      peOiEl.textContent = this.formatVolume(stock.pe.oi / stock.lotSize);
+      peOiEl.textContent = this.formatVolume(
+        Math.round(stock.pe.oi / stock.lotSize)
+      );
       peVolEl.textContent = this.formatVolume(
-        stock.pe.volumeTraded / stock.lotSize
+        Math.round(stock.pe.volumeTraded / stock.lotSize)
       );
     }
+
+    const bidIv = this.calculateBidIv(stock);
+    const askIv = this.calculateAskIv(stock);
+    const spreadIv = this.calculateSpreadIV(stock);
+    const rv = this.calculateRV(stock);
+    const vrp = (bidIv + askIv) / rv;
+
+    bidIvEl.textContent = this.formatIV(bidIv);
+    askIvEl.textContent = this.formatIV(askIv);
+    spreadIvEl.textContent = this.formatIV(spreadIv);
+    rvEl.textContent = this.formatIV(rv);
+    vrpEl.textContent = this.formatIV(vrp);
 
     if (stock.lotSize > 0) {
       lotEl.textContent = stock.lotSize.toString().padStart(8);
@@ -282,25 +515,52 @@ class MarketDataUI {
             break;
           case "ce_oi":
             comparison =
-              (dataA.ce?.oi / dataA.lotSize || 0) -
-              (dataB.ce?.oi / dataB.lotSize || 0);
+              Math.round(dataA.ce?.oi / dataA.lotSize || 0) -
+              Math.round(dataB.ce?.oi / dataB.lotSize || 0);
             break;
           case "ce_vol":
             comparison =
-              (dataA.ce?.volumeTraded / dataA.lotSize || 0) -
-              (dataB.ce?.volumeTraded / dataB.lotSize || 0);
+              Math.round(dataA.ce?.volumeTraded / dataA.lotSize || 0) -
+              Math.round(dataB.ce?.volumeTraded / dataB.lotSize || 0);
             break;
           case "pe":
             comparison = (dataA.pe?.bid || 0) - (dataB.pe?.bid || 0);
             break;
           case "pe_oi":
             comparison =
-              (dataA.pe?.oi / dataA.lotSize || 0) -
-              (dataB.pe?.oi / dataB.lotSize || 0);
+              Math.round(dataA.pe?.oi / dataA.lotSize || 0) -
+              Math.round(dataB.pe?.oi / dataB.lotSize || 0);
             break;
           case "pe_vol":
             comparison =
-              (dataA.pe?.volumeTraded || 0) - (dataB.pe?.volumeTraded || 0);
+              Math.round(dataA.pe?.volumeTraded || 0) -
+              (dataB.pe?.volumeTraded || 0);
+            break;
+          case "bid_iv":
+            comparison =
+              (this.calculateBidIv(dataA) || 0) -
+              (this.calculateBidIv(dataB) || 0);
+            break;
+          case "ask_iv":
+            comparison =
+              (this.calculateAskIv(dataA) || 0) -
+              (this.calculateAskIv(dataB) || 0);
+            break;
+          case "spread_iv":
+            comparison =
+              (this.calculateSpreadIV(dataA) || 0) -
+              (this.calculateSpreadIV(dataB) || 0);
+            break;
+          case "rv":
+            comparison =
+              (this.calculateRV(dataA) || 0) - (this.calculateRV(dataB) || 0);
+            break;
+          case "vrp":
+            comparison =
+              ((this.calculateAskIv(dataA) + this.calculateBidIv(dataA)) /
+                this.calculateRV(dataA) || 0) -
+              ((this.calculateAskIv(dataB) + this.calculateBidIv(dataB)) /
+                this.calculateRV(dataB) || 0);
             break;
           case "exposure":
             const expA = (dataA.lotSize || 0) * (dataA.future || 0);
