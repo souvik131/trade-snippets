@@ -54,6 +54,8 @@ func (c *Client) Connect(ctx *context.Context) ([]byte, error) {
 		return []byte{}, err
 	}
 
+	conn.SetReadLimit(4e6)
+
 	c.ConnMutex.Lock()
 	c.Conn = conn
 	c.ConnMutex.Unlock()

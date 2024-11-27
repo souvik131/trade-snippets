@@ -36,14 +36,29 @@ type MarketDepth struct {
 }
 
 type MarketData struct {
-	StockName      string      `json:"stockName"`
-	TradingSymbol  string      `json:"tradingSymbol"`
-	InstrumentType string      `json:"instrumentType"`
-	StrikePrice    float64     `json:"strikePrice,omitempty"`
-	LastPrice      float64     `json:"lastPrice"`
-	LotSize        float64     `json:"lotSize"`
-	Depth          MarketDepth `json:"depth"`
-	LastUpdateTime time.Time   `json:"lastUpdateTime"`
+	StockName           string      `json:"stockName"`
+	TradingSymbol       string      `json:"tradingSymbol"`
+	InstrumentType      string      `json:"instrumentType"`
+	StrikePrice         float64     `json:"strikePrice,omitempty"`
+	LastPrice           float64     `json:"lastPrice"`
+	LastTradedQuantity  uint32      `json:"lastTradedQuantity"`
+	AverageTradedPrice  float64     `json:"averageTradedPrice"`
+	VolumeTraded        uint32      `json:"volumeTraded"`
+	TotalBuy            uint32      `json:"totalBuy"`
+	TotalSell           uint32      `json:"totalSell"`
+	High                float64     `json:"high"`
+	Low                 float64     `json:"low"`
+	Open                float64     `json:"open"`
+	Close               float64     `json:"close"`
+	OI                  uint32      `json:"oi"`
+	OIHigh              uint32      `json:"oiHigh"`
+	OILow               uint32      `json:"oiLow"`
+	LastTradedTimestamp time.Time   `json:"lastTradedTimestamp"`
+	ExchangeTimestamp   time.Time   `json:"exchangeTimestamp"`
+	LotSize             float64     `json:"lotSize"`
+	Expiry              string      `json:"expiry"`
+	Depth               MarketDepth `json:"depth"`
+	LastUpdateTime      time.Time   `json:"lastUpdateTime"`
 }
 
 func NewMarketDataServer() *MarketDataServer {
@@ -62,9 +77,30 @@ func NewMarketDataServer() *MarketDataServer {
 
 func (s *MarketDataServer) getDataKey(data MarketData) string {
 	if data.InstrumentType == "FUT" {
-		return data.StockName + "-FUT"
+		return data.StockName + "-FUT-" + data.Expiry
 	}
-	return data.StockName + "-" + data.InstrumentType + "-" + data.TradingSymbol
+	return data.StockName + "-" + data.InstrumentType + "-" + data.Expiry + "-" + data.TradingSymbol
+}
+
+// RemoveOptionData removes data for unsubscribed options
+func (s *MarketDataServer) RemoveOptionData(stockName string, expiry string, symbols []string) {
+	s.latestDataLock.Lock()
+	defer s.latestDataLock.Unlock()
+
+	// Create a map of symbols for quick lookup
+	symbolMap := make(map[string]bool)
+	for _, symbol := range symbols {
+		symbolMap[symbol] = true
+	}
+
+	// Remove data for these symbols
+	for key, data := range s.latestData {
+		if data.StockName == stockName && data.Expiry == expiry {
+			if symbolMap[data.TradingSymbol] {
+				delete(s.latestData, key)
+			}
+		}
+	}
 }
 
 func (s *MarketDataServer) updateLatestData(data MarketData) {
@@ -139,6 +175,11 @@ func (s *MarketDataServer) sendBatch(batch []MarketData) {
 		binary.Write(buf, binary.LittleEndian, float32(data.StrikePrice))
 		binary.Write(buf, binary.LittleEndian, float32(data.LotSize))
 
+		// Write expiry date length and string
+		binary.Write(buf, binary.LittleEndian, uint8(len(data.Expiry)))
+		buf.WriteString(data.Expiry)
+
+		// Write best bid/ask from depth
 		if len(data.Depth.Buy) > 0 {
 			binary.Write(buf, binary.LittleEndian, float32(data.Depth.Buy[0].Price))
 		} else {
@@ -149,6 +190,22 @@ func (s *MarketDataServer) sendBatch(batch []MarketData) {
 		} else {
 			binary.Write(buf, binary.LittleEndian, float32(0))
 		}
+
+		// Write additional market data fields
+		binary.Write(buf, binary.LittleEndian, data.LastTradedQuantity)
+		binary.Write(buf, binary.LittleEndian, float32(data.AverageTradedPrice))
+		binary.Write(buf, binary.LittleEndian, data.VolumeTraded)
+		binary.Write(buf, binary.LittleEndian, data.TotalBuy)
+		binary.Write(buf, binary.LittleEndian, data.TotalSell)
+		binary.Write(buf, binary.LittleEndian, float32(data.High))
+		binary.Write(buf, binary.LittleEndian, float32(data.Low))
+		binary.Write(buf, binary.LittleEndian, float32(data.Open))
+		binary.Write(buf, binary.LittleEndian, float32(data.Close))
+		binary.Write(buf, binary.LittleEndian, data.OI)
+		binary.Write(buf, binary.LittleEndian, data.OIHigh)
+		binary.Write(buf, binary.LittleEndian, data.OILow)
+		binary.Write(buf, binary.LittleEndian, uint32(data.LastTradedTimestamp.Unix()))
+		binary.Write(buf, binary.LittleEndian, uint32(data.ExchangeTimestamp.Unix()))
 	}
 
 	message := buf.Bytes()
@@ -197,6 +254,11 @@ func (s *MarketDataServer) sendLatestToClient(client *Client) {
 			binary.Write(buf, binary.LittleEndian, float32(data.StrikePrice))
 			binary.Write(buf, binary.LittleEndian, float32(data.LotSize))
 
+			// Write expiry date length and string
+			binary.Write(buf, binary.LittleEndian, uint8(len(data.Expiry)))
+			buf.WriteString(data.Expiry)
+
+			// Write best bid/ask from depth
 			if len(data.Depth.Buy) > 0 {
 				binary.Write(buf, binary.LittleEndian, float32(data.Depth.Buy[0].Price))
 			} else {
@@ -207,6 +269,22 @@ func (s *MarketDataServer) sendLatestToClient(client *Client) {
 			} else {
 				binary.Write(buf, binary.LittleEndian, float32(0))
 			}
+
+			// Write additional market data fields
+			binary.Write(buf, binary.LittleEndian, data.LastTradedQuantity)
+			binary.Write(buf, binary.LittleEndian, float32(data.AverageTradedPrice))
+			binary.Write(buf, binary.LittleEndian, data.VolumeTraded)
+			binary.Write(buf, binary.LittleEndian, data.TotalBuy)
+			binary.Write(buf, binary.LittleEndian, data.TotalSell)
+			binary.Write(buf, binary.LittleEndian, float32(data.High))
+			binary.Write(buf, binary.LittleEndian, float32(data.Low))
+			binary.Write(buf, binary.LittleEndian, float32(data.Open))
+			binary.Write(buf, binary.LittleEndian, float32(data.Close))
+			binary.Write(buf, binary.LittleEndian, data.OI)
+			binary.Write(buf, binary.LittleEndian, data.OIHigh)
+			binary.Write(buf, binary.LittleEndian, data.OILow)
+			binary.Write(buf, binary.LittleEndian, uint32(data.LastTradedTimestamp.Unix()))
+			binary.Write(buf, binary.LittleEndian, uint32(data.ExchangeTimestamp.Unix()))
 		}
 
 		err := client.Write(&ctx, &Writer{

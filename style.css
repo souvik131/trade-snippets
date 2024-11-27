@@ -1,0 +1,238 @@
+body {
+  font-family: monospace;
+  margin: 0;
+  padding: 10px;
+  background-color: #000;
+  color: #fff;
+  min-width: 1200px; /* Prevent horizontal squishing */
+}
+
+.header-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #000;
+  z-index: 100;
+  padding: 4px;
+  height: 52px;
+  border-bottom: 1px solid #333;
+  min-width: 1200px; /* Match body min-width */
+}
+
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 4px;
+}
+
+.status-left {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+#status {
+  padding: 1px 6px;
+  border-radius: 2px;
+  font-weight: normal;
+}
+
+.connected {
+  background: #28a745;
+  color: white;
+}
+
+.disconnected {
+  background: #dc3545;
+  color: white;
+}
+
+.connecting {
+  background: #ffc107;
+  color: black;
+}
+
+.stock-count {
+  color: #888;
+}
+
+.market-status {
+  padding: 1px 6px;
+  border-radius: 2px;
+  background: #333;
+  color: #fff;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 0 4px;
+}
+
+.expiry-select {
+  padding: 1px 6px;
+  border-radius: 2px;
+  background: #333;
+  color: #fff;
+  border: 1px solid #444;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.table-container {
+  margin: 0 4px;
+  padding-top: 57px; /* Changed from margin to padding */
+  position: relative; /* Contain the table header */
+  min-width: 1200px; /* Match body min-width */
+}
+
+.table-content {
+  border: none;
+  position: relative;
+}
+
+.stock-row {
+  display: grid;
+  grid-template-columns: 120px repeat(12, minmax(60px, 1fr));
+  /* padding: 1px 4px; */
+  /* gap: 8px; */
+  align-items: center;
+  height: 18px;
+  line-height: 18px;
+  min-height: 18px;
+
+  gap: 20px;
+  padding: 10px;
+  border-bottom: 1px solid #333;
+}
+
+.stock-row.header {
+  color: #888;
+  font-weight: normal;
+  position: sticky;
+  top: 57px; /* Match table-container padding-top */
+  background: #000;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #333;
+  font-size: 12px;
+  height: 3em;
+  line-height: 20px;
+  z-index: 90;
+}
+
+.stock-row:not(.header):hover {
+  background: #111;
+}
+
+.stock-row > div {
+  text-align: right;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  height: 18px;
+  line-height: 18px;
+}
+
+.stock-row > div:first-child {
+  text-align: left;
+}
+
+.bid-ask {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+  width: 100%;
+  height: 18px;
+  line-height: 18px;
+}
+
+.bid {
+  color: #28a745;
+  width: 50%;
+  text-align: right;
+  padding-right: 1px;
+}
+
+.ask {
+  color: #dc3545;
+  width: 50%;
+  text-align: right;
+  padding-right: 1px;
+}
+
+.sort-icon {
+  content: "↕";
+  cursor: pointer;
+  position: relative;
+  font-size: 12px;
+  opacity: 1;
+}
+
+.sort-icon:hover {
+  color: #fff;
+}
+
+.sort-icon::after {
+  content: "↕";
+  opacity: 1;
+}
+
+.sort-icon.sort-asc::after {
+  content: "↑";
+  opacity: 1;
+}
+
+.sort-icon.sort-desc::after {
+  content: "↓";
+  opacity: 1;
+}
+
+.stale {
+  opacity: 0.5;
+}
+
+.positive {
+  color: #28a745;
+}
+
+.negative {
+  color: #dc3545;
+}
+
+/* Ensure consistent height even when empty */
+.stock-row > div:empty::after {
+  content: "\00a0";
+  visibility: hidden;
+  height: 18px;
+  display: block;
+}
+
+/* Fix header background */
+.header-container::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #333;
+}
+
+/* Handle horizontal scroll */
+@media screen and (max-width: 1200px) {
+  body {
+    overflow-x: auto;
+  }
+
+  .header-container {
+    width: 1200px; /* Fixed width when scrolling */
+  }
+
+  .table-container {
+    width: 1200px; /* Fixed width when scrolling */
+  }
+}
