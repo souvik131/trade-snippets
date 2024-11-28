@@ -97,7 +97,7 @@ body {
 
 .stock-row {
   display: grid;
-  grid-template-columns: 120px repeat(17, minmax(60px, 1fr)); /* Updated for VRP column */
+  grid-template-columns: 120px repeat(18, minmax(60px, 1fr)); /* Updated for IV Ratio column */
   align-items: center;
   height: 18px;
   line-height: 18px;
@@ -166,7 +166,8 @@ body {
 .ask-iv,
 .spread-iv,
 .rv,
-.vrp {
+.vrp,
+.iv-ratio {
   color: #fff;
 }
 

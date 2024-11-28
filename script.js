@@ -387,10 +387,46 @@ class MarketDataUI {
       <div class="spread-iv">${"\u00A0".repeat(8)}</div>
       <div class="rv">${"\u00A0".repeat(8)}</div>
       <div class="vrp">${"\u00A0".repeat(8)}</div>
+      <div class="iv-ratio">${"\u00A0".repeat(8)}</div>
       <div class="lot-size">${"\u00A0".repeat(8)}</div>
       <div class="exposure">${"\u00A0".repeat(8)}</div>
     `;
     this.app.appendChild(row);
+  }
+
+  // Add method to find next expiry data
+  findNextExpiryData(stockName, currentExpiry) {
+    const nextExpiry = Array.from(this.stockData.entries())
+      .filter(
+        ([_, data]) =>
+          data.stockName === stockName && data.expiry > currentExpiry
+      )
+      .sort((a, b) => a[1].expiry.localeCompare(b[1].expiry))[0];
+
+    return nextExpiry ? nextExpiry[1] : null;
+  }
+
+  // Add method to calculate IV ratio
+  calculateIVRatio(stock) {
+    if (!stock) return null;
+
+    const currentIV =
+      (this.calculateBidIv(stock) + this.calculateAskIv(stock)) / 2;
+    if (!currentIV) return null;
+
+    const nextExpiryData = this.findNextExpiryData(
+      stock.stockName,
+      stock.expiry
+    );
+    if (!nextExpiryData) return null;
+
+    const nextExpiryIV =
+      (this.calculateBidIv(nextExpiryData) +
+        this.calculateAskIv(nextExpiryData)) /
+      2;
+    if (!nextExpiryIV) return null;
+
+    return currentIV / nextExpiryIV;
   }
 
   updateRow(key) {
@@ -413,6 +449,7 @@ class MarketDataUI {
     const spreadIvEl = row.querySelector(".spread-iv");
     const rvEl = row.querySelector(".rv");
     const vrpEl = row.querySelector(".vrp");
+    const ivRatioEl = row.querySelector(".iv-ratio");
     const lotEl = row.querySelector(".lot-size");
     const expEl = row.querySelector(".exposure");
 
@@ -455,6 +492,9 @@ class MarketDataUI {
     const spreadIv = this.calculateSpreadIV(stock);
     const rv = this.calculateRV(stock);
     const vrp = (bidIv + askIv) / rv;
+    const ivRatio = this.calculateIVRatio(stock);
+
+    ivRatioEl.textContent = this.formatIV(ivRatio);
 
     bidIvEl.textContent = this.formatIV(bidIv);
     askIvEl.textContent = this.formatIV(askIv);
@@ -550,6 +590,11 @@ class MarketDataUI {
             comparison =
               (this.calculateSpreadIV(dataA) || 0) -
               (this.calculateSpreadIV(dataB) || 0);
+            break;
+          case "iv_ratio":
+            comparison =
+              (this.calculateIVRatio(dataA) || 0) -
+              (this.calculateIVRatio(dataB) || 0);
             break;
           case "rv":
             comparison =
