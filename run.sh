@@ -1,4 +1,7 @@
 #!/bin/sh
 
 
-docker-compose up -d --force-recreate --build
+sudo go build -o build/linux;
+sudo service fetch stop;
+sudo systemctl daemon-reload;
+sudo service fetch start;
