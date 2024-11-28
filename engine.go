@@ -183,7 +183,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 	marketDataServer := ws.NewMarketDataServer()
 	go marketDataServer.Start()
 
-	http.Handle("/", http.FileServer(http.Dir(os.Getenv("PATH"))))
+	http.Handle("/", http.FileServer(http.Dir(os.Getenv("WEBPATH"))))
 	http.HandleFunc("/ws", marketDataServer.ServeWs)
 	go func() {
 		if err := http.ListenAndServe(":8080", nil); err != nil {
