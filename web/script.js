@@ -107,11 +107,11 @@ class MarketDataUI {
     return askIv - bidIv;
   }
 
-  calculateRV(stock) {
-    this.setupExpirySelect();
-    this.connect();
-    this.startStaleDataCheck();
-  }
+  // calculateRV(stock) {
+  //   this.setupExpirySelect();
+  //   this.connect();
+  //   this.startStaleDataCheck();
+  // }
 
   calculateBidIv(stock) {
     if (!stock || !stock.ce || !stock.pe || !stock.future || !stock.expiry)
@@ -216,7 +216,7 @@ class MarketDataUI {
 
   calculateRV(stock) {
     return (
-      Math.abs(this.calculateChange(stock.future, stock.futureClose)) *
+      Math.abs(this.calculateChange(stock.futureHigh, stock.futureLow)) *
         Math.sqrt(252) || null
     );
   }
@@ -341,7 +341,7 @@ class MarketDataUI {
 
   calculateChange(current, close) {
     if (!current || !close || close === 0) return null;
-    return ((current - close) / close) * 100;
+    return Math.abs(((current - close) / close) * 100);
   }
 
   formatChange(change) {
@@ -831,6 +831,8 @@ class MarketDataUI {
         stockName: data.stockName,
         future: null,
         futureClose: null,
+        futureHigh: null,
+        futureLow: null,
         strike: null,
         ce: null,
         pe: null,
@@ -854,6 +856,8 @@ class MarketDataUI {
       if (data.lastPrice > 0) {
         stock.future = data.lastPrice;
         stock.futureClose = data.close;
+        stock.futureHigh = data.high;
+        stock.futureLow = data.low;
       }
       if (data.lotSize > 0) {
         stock.lotSize = data.lotSize;
