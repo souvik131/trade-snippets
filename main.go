@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 	"sync"
 
 	"github.com/joho/godotenv"
@@ -12,11 +13,21 @@ import (
 func main() {
 	log.Println("Starting application...")
 
-	// Load environment variables
-	err := godotenv.Load()
-	if err != nil {
-		log.Panicf("Error loading .env file: %s", err)
-		return
+	// Load environment variables]
+	envpath := os.Getenv("ENVPATH")
+	if envpath == "" {
+		err := godotenv.Load()
+		if err != nil {
+			log.Panicf("Error loading .env file: %s", err)
+			return
+		}
+
+	} else {
+		err := godotenv.Load(envpath)
+		if err != nil {
+			log.Panicf("Error loading .env file: %s", err)
+			return
+		}
 	}
 
 	// Initialize Kite client
@@ -25,7 +36,7 @@ func main() {
 
 	// Login to Kite
 	log.Println("Logging in to Kite...")
-	err = k.Login(&ctx)
+	err := k.Login(&ctx)
 	if err != nil {
 		log.Panicf("Login failed: %s", err)
 		return

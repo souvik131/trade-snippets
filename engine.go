@@ -5,6 +5,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -182,7 +183,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 	marketDataServer := ws.NewMarketDataServer()
 	go marketDataServer.Start()
 
-	http.Handle("/", http.FileServer(http.Dir(".")))
+	http.Handle("/", http.FileServer(http.Dir(os.Getenv("PATH"))))
 	http.HandleFunc("/ws", marketDataServer.ServeWs)
 	go func() {
 		if err := http.ListenAndServe(":8080", nil); err != nil {
