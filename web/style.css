@@ -7,6 +7,22 @@ body {
   min-width: 1200px; /* Prevent horizontal squishing */
 }
 
+.chart-container {
+  height: 200px;
+  margin: 60px 4px 10px;
+  padding: 10px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 4px;
+}
+
+.avg-iv-stats {
+  color: #888;
+  font-size: 12px;
+  margin-bottom: 5px;
+  text-align: center;
+}
+
 .header-container {
   position: fixed;
   top: 0;

@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Market Data</title>
     <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
   </head>
   <body>
     <div class="header-container">
@@ -20,6 +22,10 @@
       </div>
     </div>
 
+    <div class="chart-container">
+      <div id="avgIvStats" class="avg-iv-stats"></div>
+      <canvas id="ivChart"></canvas>
+    </div>
     <div class="table-container">
       <div class="table-content">
         <div class="stock-row header">

@@ -13,10 +13,107 @@ class MarketDataUI {
     this.currentSort = { column: "name", direction: "asc" };
     this.selectedExpiry = null;
     this.debug = false;
+    this.midIVMap = new Map(); // Store mid IVs for each script
+    this.ivHistory = []; // Store historical average IV data points
+    this.chart = this.initializeChart();
     this.setupSortingListeners();
     this.setupExpirySelect();
     this.connect();
     this.startStaleDataCheck();
+  }
+
+  initializeChart() {
+    const ctx = document.getElementById("ivChart").getContext("2d");
+    return new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: "Average IV",
+            data: [],
+            borderColor: "#28a745",
+            tension: 0.4,
+            pointRadius: 0,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        scales: {
+          x: {
+            type: "time",
+            time: {
+              unit: "minute",
+              displayFormats: {
+                minute: "HH:mm:ss",
+              },
+            },
+            grid: {
+              color: "#333",
+            },
+            ticks: {
+              color: "#888",
+            },
+          },
+          y: {
+            beginAtZero: false,
+            grid: {
+              color: "#333",
+            },
+            ticks: {
+              color: "#888",
+            },
+          },
+        },
+        plugins: {
+          legend: {
+            labels: {
+              color: "#888",
+            },
+          },
+        },
+      },
+    });
+  }
+
+  calculateMidIV(stock) {
+    const bidIv = this.calculateBidIv(stock);
+    const askIv = this.calculateAskIv(stock);
+    if (bidIv === null || askIv === null) return null;
+    return (bidIv + askIv) / 2;
+  }
+
+  updateAverageIV() {
+    const validIVs = Array.from(this.midIVMap.values()).filter(
+      (iv) => iv !== null
+    );
+    if (validIVs.length === 0) return null;
+
+    const avgIV = validIVs.reduce((sum, iv) => sum + iv, 0) / validIVs.length;
+    const timestamp = new Date();
+
+    this.ivHistory.push({ timestamp, avgIV });
+
+    // Keep last 100 data points
+    if (this.ivHistory.length > 100) {
+      this.ivHistory.shift();
+    }
+
+    // Update chart
+    this.chart.data.labels = this.ivHistory.map((point) => point.timestamp);
+    this.chart.data.datasets[0].data = this.ivHistory.map(
+      (point) => point.avgIV
+    );
+    this.chart.update("none"); // Update without animation for better performance
+
+    // Update stats display
+    const avgIvStats = document.getElementById("avgIvStats");
+    avgIvStats.textContent = `Average IV calculated from ${validIVs.length} stocks`;
+
+    return avgIV;
   }
 
   calculateImpliedVolatility(stock) {
@@ -44,57 +141,6 @@ class MarketDataUI {
     return iv;
   }
 
-  calculateBidIv(stock) {
-    if (!stock || !stock.ce || !stock.pe || !stock.future || !stock.expiry)
-      return null;
-
-    const now = new Date();
-    const expiry = new Date(stock.expiry);
-    expiry.setHours(15, 30, 0, 0);
-
-    const totalTimeInSeconds = this.calculateTradingSeconds(now, expiry);
-    const leftTimeInSeconds = this.calculateTradingSeconds(now, expiry);
-
-    if (totalTimeInSeconds <= 0 || leftTimeInSeconds <= 0) return null;
-
-    const iv =
-      1.25 *
-      ((stock.ce.bid + stock.pe.bid) / stock.future) *
-      Math.sqrt(totalTimeInSeconds / leftTimeInSeconds) *
-      100;
-
-    return iv;
-  }
-
-  calculateAskIv(stock) {
-    if (!stock || !stock.ce || !stock.pe || !stock.future || !stock.expiry)
-      return null;
-
-    const now = new Date();
-    const expiry = new Date(stock.expiry);
-    expiry.setHours(15, 30, 0, 0);
-
-    const totalTimeInSeconds = this.calculateTradingSeconds(now, expiry);
-    const leftTimeInSeconds = this.calculateTradingSeconds(now, expiry);
-
-    if (totalTimeInSeconds <= 0 || leftTimeInSeconds <= 0) return null;
-
-    const iv =
-      1.25 *
-      ((stock.ce.ask + stock.pe.ask) / stock.future) *
-      Math.sqrt(totalTimeInSeconds / leftTimeInSeconds) *
-      100;
-
-    return iv;
-  }
-
-  calculateSpreadIV(stock) {
-    if (!stock || !stock.ce || !stock.pe) return null;
-    return (
-      (stock.ce.askIv - stock.ce.bidIv + (stock.pe.askIv - stock.pe.bidIv)) / 2
-    );
-  }
-
   calculateSpreadIV(stock) {
     if (!stock || !stock.ce || !stock.pe || !stock.future || !stock.expiry)
       return null;
@@ -106,12 +152,6 @@ class MarketDataUI {
 
     return askIv - bidIv;
   }
-
-  // calculateRV(stock) {
-  //   this.setupExpirySelect();
-  //   this.connect();
-  //   this.startStaleDataCheck();
-  // }
 
   calculateBidIv(stock) {
     if (!stock || !stock.ce || !stock.pe || !stock.future || !stock.expiry)
@@ -882,6 +922,16 @@ class MarketDataUI {
 
     if (data.expiry === this.selectedExpiry) {
       this.updateRow(key);
+
+      // Calculate and store mid IV
+      const stock = this.stockData.get(key);
+      if (stock) {
+        const midIV = this.calculateMidIV(stock);
+        if (midIV !== null) {
+          this.midIVMap.set(data.stockName, midIV);
+          this.updateAverageIV();
+        }
+      }
     }
   }
 
