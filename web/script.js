@@ -87,9 +87,15 @@ class MarketDataUI {
   }
 
   updateAverageIV() {
-    const validIVs = Array.from(this.midIVMap.values()).filter(
-      (iv) => iv !== null
-    );
+    // Filter stocks by selected expiry
+    const currentExpiryStocks = Array.from(this.stockData.entries())
+      .filter(([_, data]) => data.expiry === this.selectedExpiry)
+      .map(([_, data]) => data);
+
+    const validIVs = currentExpiryStocks
+      .map((stock) => this.calculateMidIV(stock))
+      .filter((iv) => iv !== null);
+
     if (validIVs.length === 0) return null;
 
     const avgIV = validIVs.reduce((sum, iv) => sum + iv, 0) / validIVs.length;
@@ -109,9 +115,11 @@ class MarketDataUI {
     );
     this.chart.update("none"); // Update without animation for better performance
 
-    // Update stats display
+    // Update stats display with expiry info
     const avgIvStats = document.getElementById("avgIvStats");
-    avgIvStats.textContent = `Average IV calculated from ${validIVs.length} stocks`;
+    avgIvStats.textContent = `Average IV calculated from ${
+      validIVs.length
+    } stocks (${this.formatExpiry(this.selectedExpiry)})`;
 
     return avgIV;
   }
