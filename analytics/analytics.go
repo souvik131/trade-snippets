@@ -77,6 +77,7 @@ var (
 		},
 		VOL_SKEW: {
 			"script":                  "string",
+			"expiry":                  "string",
 			"realized_vol":            "float",
 			"implied_vol":             "float",
 			"volatility_risk_premium": "float",
