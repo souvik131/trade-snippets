@@ -137,7 +137,7 @@ func Read(dateStr string) {
 			if t, ok := tokenMap[ticker.Token]; ok {
 				ticker.TradingSymbol = t.TradingSymbol
 				// if counter%1000000 == 0 {
-				fmt.Println(counter, "records", ticker.ExchangeTimestamp, ticker.TradingSymbol, "Last Price :", ticker.LastPrice, "Bid :", ticker.Depth.Buy[0].Price, "Offer :", ticker.Depth.Sell[0].Price)
+				fmt.Printf("%v: %+v\n", counter, ticker)
 				// }
 				indices[t.Name] = true
 			}

@@ -4,3 +4,4 @@
 build
 nats/data
 read.sh
+clickhouse

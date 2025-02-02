@@ -14,7 +14,14 @@ services:
       - "-c"
       - "/etc/nats/nats.conf"
     restart: always
-
+  clickhouse:
+    image: yandex/clickhouse-server
+    ports:
+      - "127.0.0.1:8123:8123"
+      - "127.0.0.1:9000:9000"
+    volumes:
+      - ./clickhouse/data:/var/lib/clickhouse
+    restart: always
   fetch:
     build:
       context: ./
@@ -27,3 +34,4 @@ services:
       - .env
     depends_on:
       - nats
+      - clickhouse
