@@ -30,22 +30,10 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var rotationInterval = 10.0
+var rotationInterval = 3.0
 var instrumentsPerRequest = 3000.0
-var dateFormat = "2006-01-02"
 var dateFormatConcise = "20060102"
 var t = &notifications.Telegram{}
-var IndexMap = map[string]string{
-	"NIFTY BANK":        "BANKNIFTY",
-	"NIFTY 50":          "NIFTY",
-	"NIFTY FIN SERVICE": "FINNIFTY",
-	"NIFTY MID SELECT":  "MIDCPNIFTY",
-	"SENSEX":            "SENSEX",
-	"BANKEX":            "BANKEX",
-	"SNSX50":            "SENSEX50",
-	"NIFTY NEXT 50":     "NIFTYNXT50",
-	"INDIA VIX":         "VIX",
-}
 
 func Write() {
 
