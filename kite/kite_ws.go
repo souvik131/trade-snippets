@@ -23,20 +23,20 @@ var (
 const HeartBeatIntervalInSeconds float64 = 20
 const BufferSize int = 1000
 
-func GetWebsocketClientForWeb(ctx *context.Context, id string, token string, receiveBinaryTickers bool) (*TickerClient, error) {
+func GetWebsocketClientForWeb(ctx *context.Context, id string, token string /*, receiveBinaryTickers bool*/) (*TickerClient, error) {
 
 	token = strings.Replace(token, "enctoken ", "", 1)
-	return getWebsocketClient(ctx, fmt.Sprintf("user_id=%v&access_token=%v&api_key=kitefront", id, token), receiveBinaryTickers)
+	return getWebsocketClient(ctx, fmt.Sprintf("user_id=%v&access_token=%v&api_key=kitefront", id, token) /*, receiveBinaryTickers*/)
 }
 
-func GetWebsocketClientForAPI(ctx *context.Context, token string, receiveBinaryTickers bool) (*TickerClient, error) {
+func GetWebsocketClientForAPI(ctx *context.Context, token string /*, receiveBinaryTickers bool*/) (*TickerClient, error) {
 	token = strings.Replace(token, "token ", "", 1)
 	apiKey := strings.Split(token, ":")[0]
 	accessToken := strings.Replace(token, apiKey+":", "", 1)
-	return getWebsocketClient(ctx, fmt.Sprintf("access_token=%v&api_key=%v", accessToken, apiKey), receiveBinaryTickers)
+	return getWebsocketClient(ctx, fmt.Sprintf("access_token=%v&api_key=%v", accessToken, apiKey) /*, receiveBinaryTickers*/)
 }
 
-func getWebsocketClient(ctx *context.Context, rawQuery string, receiveBinaryTickers bool) (*TickerClient, error) {
+func getWebsocketClient(ctx *context.Context, rawQuery string /*, receiveBinaryTickers bool*/) (*TickerClient, error) {
 	log.Printf("websocket : start")
 	go t.Send("websocket : start")
 	k := &TickerClient{
@@ -56,7 +56,7 @@ func getWebsocketClient(ctx *context.Context, rawQuery string, receiveBinaryTick
 		QuoteTokens:                map[uint32]bool{},
 		LtpTokens:                  map[uint32]bool{},
 		HeartBeatIntervalInSeconds: HeartBeatIntervalInSeconds,
-		ReceiveBinaryTickers:       receiveBinaryTickers,
+		// ReceiveBinaryTickers:       receiveBinaryTickers,
 	}
 
 	k.LastUpdatedTime.Store(time.Now().Unix())
@@ -291,11 +291,11 @@ func (k *TickerClient) onBinaryMessage(reader *ws.Reader) {
 	message := reader.Message
 	numOfPackets := binary.BigEndian.Uint16(message[0:2])
 	if numOfPackets > 0 {
-		if k.ReceiveBinaryTickers {
-			k.BinaryTickerChan <- reader.Message
-		} else {
-			k.ParseBinary(message)
-		}
+		// if k.ReceiveBinaryTickers {
+		k.BinaryTickerChan <- reader.Message
+		// } else {
+		k.ParseBinary(message)
+		// }
 	}
 
 }

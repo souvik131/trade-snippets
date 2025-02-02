@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -29,7 +30,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var instrumentsPerSocket = 3000.0
+var rotationInterval = 10.0
 var instrumentsPerRequest = 3000.0
 var dateFormat = "2006-01-02"
 var dateFormatConcise = "20060102"
@@ -102,7 +103,7 @@ func Read(dateStr string) {
 		log.Panicf("%s", err)
 	}
 
-	b, err := os.ReadFile("./binary/index_" + dateStr + ".bin.zstd")
+	b, err := os.ReadFile("./binary/market_data_" + dateStr + ".bin.zstd")
 	if err != nil {
 		log.Panicf("%s", err)
 	}
@@ -135,9 +136,9 @@ func Read(dateStr string) {
 			counter++
 			if t, ok := tokenMap[ticker.Token]; ok {
 				ticker.TradingSymbol = t.TradingSymbol
-				if counter%1000000 == 0 {
-					fmt.Println(counter, "records", ticker.ExchangeTimestamp, ticker.TradingSymbol, "Bid :", ticker.Depth.Buy[0].Price, "Offer :", ticker.Depth.Sell[0].Price)
-				}
+				// if counter%1000000 == 0 {
+				fmt.Println(counter, "records", ticker.ExchangeTimestamp, ticker.TradingSymbol, "Last Price :", ticker.LastPrice, "Bid :", ticker.Depth.Buy[0].Price, "Offer :", ticker.Depth.Sell[0].Price)
+				// }
 				indices[t.Name] = true
 			}
 			timeElapsed = time.Since(start)
@@ -261,7 +262,8 @@ func saveFile(filePath string, data []byte) error {
 }
 
 func Serve(ctx *context.Context, k *kite.Kite) {
-	nc, err := nats.Connect(os.Getenv("NATS_WRITE_URI"))
+	log.Println(os.Getenv("TA_NATS_WRITE_URI"))
+	nc, err := nats.Connect(os.Getenv("TA_NATS_WRITE_URI"))
 	if err != nil {
 		log.Panic(err)
 	}
@@ -312,224 +314,249 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 	log.Println("Instrument Map successfully written to file")
 
 	k.TickerClients = []*kite.TickerClient{}
-
-	expiryByName := map[string]string{}
+	// Initialize token tracking
+	var processedTokens int64 = 0
+	processedSymbols := make(map[string]bool)
 
 	allTokens := []string{}
-	for _, data := range *kite.BrokerInstrumentTokens {
-
-		isIndex := data.Name == "NIFTY" ||
-			data.Name == "BANKNIFTY" ||
-			data.Name == "FINNIFTY" ||
-			data.Name == "MIDCPNIFTY" ||
-			data.Name == "BANKEX" ||
-			data.Name == "NIFTYNXT50" ||
-			data.Name == "SENSEX50" ||
-			data.Name == "SENSEX"
-
-		if data.Expiry != "" && (data.Exchange == "NFO" || data.Exchange == "BFO") && isIndex {
-			name := data.Exchange + ":" + data.Name
-			if date, ok := expiryByName[name]; ok && date != "" {
-				dateSaved, err := time.Parse(dateFormat, date)
-				if err != nil {
-					log.Panicf("%v", err)
-				}
-
-				dateExpiry, err := time.Parse(dateFormat, data.Expiry)
-				if err != nil {
-					log.Panicf("%v", err)
-				}
-				if dateSaved.Sub(dateExpiry) > 0 {
-					expiryByName[name] = data.Expiry
-				}
-			} else {
-				expiryByName[name] = data.Expiry
-			}
-		} else if _, ok := IndexMap[data.TradingSymbol]; ok && data.InstrumentType == "EQ" {
-			allTokens = append(allTokens, data.TradingSymbol)
-		}
-
-	}
 
 	for _, data := range *kite.BrokerInstrumentTokens {
-		if exp, ok := expiryByName[data.Exchange+":"+data.Name]; ok && exp == data.Expiry && data.Expiry != "" {
+		if data.Exchange == "NFO" || data.Exchange == "NFO-OPT" || data.Name == "SENSEX" {
 			allTokens = append(allTokens, data.TradingSymbol)
 		}
 	}
-	log.Println("Subscribed tokens: ", len(allTokens))
+	totalTokens := len(allTokens)
+	log.Printf("Total unique tokens to process: %d", totalTokens)
 
-	i := 0
-	for len(allTokens) > 0 {
-		minLen := int(math.Min(instrumentsPerSocket, float64(len(allTokens))))
-		tokens := allTokens[0:minLen]
-		allTokens = allTokens[minLen:]
-		ticker, err := k.GetWebSocketClient(ctx, true)
-		if err != nil {
-			log.Panicf("%v", err)
-		}
-		k.TickerClients = append(k.TickerClients, ticker)
-		k.TickSymbolMap = map[string]kite.KiteTicker{}
-		go func(t *kite.TickerClient) {
-			for range t.ConnectChan {
-				log.Printf("%v : Websocket is connected", i)
-				for len(tokens) > 0 {
-					minLen := int(math.Min(instrumentsPerRequest, float64(len(tokens))))
-					t.SubscribeFull(ctx, tokens[0:minLen])
-					tokens = tokens[minLen:]
-					log.Println("subscribed", minLen, i)
-					<-time.After(5 * time.Second)
-				}
-			}
-		}(k.TickerClients[i])
-		go func(t *kite.TickerClient) {
-			for message := range t.BinaryTickerChan {
+	var symbolsMutex sync.Mutex
+	ticker, err := k.GetWebSocketClient(ctx /*, false*/)
+	if err != nil {
+		log.Panicf("%v", err)
+	}
+	k.TickerClients = append(k.TickerClients, ticker)
+	k.TickSymbolMap = map[string]kite.KiteTicker{}
 
-				appendToFile("./binary/index_"+time.Now().Format(dateFormatConcise)+".bin.zstd", message)
+	// Handle websocket connection
+	go func(t *kite.TickerClient) {
+		for range t.ConnectChan {
+			log.Println("Websocket is connected")
 
-				data := &storage.Data{
-					Tickers: []*storage.Ticker{},
-				}
-				numOfPackets := binary.BigEndian.Uint16(message[0:2])
-				if numOfPackets > 0 {
-
-					message = message[2:]
-					for {
-						if numOfPackets == 0 {
-							break
-						}
-
-						numOfPackets--
-						packetSize := binary.BigEndian.Uint16(message[0:2])
-						packet := kite.Packet(message[2 : packetSize+2])
-						values := packet.ParseBinary(int(math.Min(64, float64(len(packet)))))
-
-						ticker := &storage.Ticker{
-							Depth: &storage.Depth{
-								Buy:  []*storage.Order{},
-								Sell: []*storage.Order{},
-							},
-						}
-						if len(values) >= 2 {
-							ticker.Token = values[0]
-							ticker.LastPrice = values[1]
-						}
-						switch len(values) {
-						case 2:
-						case 7:
-							ticker.High = values[2]
-							ticker.Low = values[3]
-							ticker.Open = values[4]
-							ticker.Close = values[5]
-							ticker.ExchangeTimestamp = values[6]
-						case 8:
-							ticker.High = values[2]
-							ticker.Low = values[3]
-							ticker.Open = values[4]
-							ticker.Close = values[5]
-							ticker.PriceChange = values[6]
-							ticker.ExchangeTimestamp = values[7]
-						case 11:
-							ticker.LastTradedQuantity = values[2]
-							ticker.AverageTradedPrice = values[3]
-							ticker.VolumeTraded = values[4]
-							ticker.TotalBuy = values[5]
-							ticker.TotalSell = values[6]
-							ticker.High = values[7]
-							ticker.Low = values[8]
-							ticker.Open = values[9]
-							ticker.Close = values[10]
-						case 16:
-							ticker.LastTradedQuantity = values[2]
-							ticker.AverageTradedPrice = values[3]
-							ticker.VolumeTraded = values[4]
-							ticker.TotalBuy = values[5]
-							ticker.TotalSell = values[6]
-							ticker.High = values[7]
-							ticker.Low = values[8]
-							ticker.Open = values[9]
-							ticker.Close = values[10]
-							ticker.LastTradedTimestamp = values[11]
-							ticker.OI = values[12]
-							ticker.OIHigh = values[13]
-							ticker.OILow = values[14]
-							ticker.ExchangeTimestamp = values[15]
-						default:
-							log.Println("unkown length of packet", len(values), values)
-						}
-
-						if len(packet) > 64 {
-
-							packet = packet[64:]
-
-							values := packet.ParseMarketDepth()
-							lobDepth := len(values) / 6
-
-							for {
-								if len(values) == 0 {
-
-									break
+			// Start rotation
+			go func() {
+				for {
+					select {
+					case <-(*ctx).Done():
+						return
+					default:
+						// Rotate through all tokens in chunks
+						for start := 0; start < len(allTokens); start += int(instrumentsPerRequest) {
+							select {
+							case <-(*ctx).Done():
+								return
+							default:
+								end := start + int(instrumentsPerRequest)
+								if end > len(allTokens) {
+									end = len(allTokens)
 								}
-								qty := values[0]
-								price := values[1]
-								orders := values[2]
-								if len(ticker.Depth.Buy) < lobDepth {
-									ticker.Depth.Buy = append(ticker.Depth.Buy, &storage.Order{Price: price, Quantity: qty, Orders: orders})
-								} else {
 
-									ticker.Depth.Sell = append(ticker.Depth.Sell, &storage.Order{Price: price, Quantity: qty, Orders: orders})
+								// Unsubscribe from previous chunk
+								prevStart := start - int(instrumentsPerRequest)
+								if prevStart >= 0 {
+									prevEnd := start
+									t.Unsubscribe(ctx, allTokens[prevStart:prevEnd])
+									log.Printf("Unsubscribed from tokens %d-%d", prevStart, prevEnd)
 								}
-								values = values[3:]
 
+								// Subscribe to new chunk
+								t.SubscribeFull(ctx, allTokens[start:end])
+								log.Printf("Subscribed to tokens %d-%d", start, end)
+
+								// Sleep for rotation interval
+								<-time.After(time.Duration(rotationInterval) * time.Second)
 							}
 						}
-						if len(message) > int(packetSize+2) {
-							message = message[packetSize+2:]
-						}
-						bytes, err := json.Marshal(ticker)
-						if err != nil {
-							log.Panicf("%s", err)
-						}
-						tokenData := tokenTradingsymbolMap[ticker.Token]
-						if tokenData.InstrumentType == "FUT" {
-							if nc.Status() != nats.CONNECTED {
-								continue
-							} else {
-								js.PublishAsync(fmt.Sprintf("FEED_FUT.%v.%v.%v", tokenData.Exchange, tokenData.Name, tokenData.Expiry), bytes)
-
-							}
-
-						} else if tokenData.InstrumentType == "CE" || tokenData.InstrumentType == "PE" {
-							if nc.Status() != nats.CONNECTED {
-								continue
-							} else {
-								js.PublishAsync(fmt.Sprintf("FEED_OPT.%v.%v.%v.%v.%v", tokenData.Exchange, tokenData.Name, tokenData.Expiry, tokenData.Strike, tokenData.InstrumentType), bytes)
-
-							}
-						} else if tokenData.InstrumentType == "EQ" {
-							if nc.Status() != nats.CONNECTED {
-								continue
-							} else {
-								js.PublishAsync(fmt.Sprintf("FEED_EQ.%v.%v", tokenData.Exchange, tokenData.Name), bytes)
-
-							}
-						}
-						data.Tickers = append(data.Tickers, ticker)
-
 					}
 				}
-				// bytes, err := proto.Marshal(data)
-				// if err != nil {
-				// 	log.Panicf("%s", err)
-				// }
-				// appendToFile("./binary/index_proto_"+time.Now().Format(dateFormatConcise)+".zstd", bytes)
+			}()
+		}
+	}(ticker)
 
+	// Handle ticker data
+	go func(t *kite.TickerClient) {
+		for ticker := range t.TickerChan {
+			symbolsMutex.Lock()
+			if !processedSymbols[ticker.TradingSymbol] {
+				processedSymbols[ticker.TradingSymbol] = true
+				processed := atomic.AddInt64(&processedTokens, 1)
+				if processed%1000 == 0 || float64(processed)/float64(totalTokens) == 1 {
+					log.Printf("New token processed: %s (%d/%d - %.2f%%)",
+						ticker.TradingSymbol,
+						processed,
+						totalTokens,
+						float64(processed)/float64(totalTokens)*100)
+				}
+				if float64(processed)/float64(totalTokens) == 1 {
+					processedTokens = 0
+					processedSymbols = make(map[string]bool)
+				}
 			}
-		}(k.TickerClients[i])
-		go k.TickerClients[i].Serve(ctx)
-		<-time.After(5 * time.Second * time.Duration(instrumentsPerSocket/instrumentsPerRequest))
-		i++
-	}
-	log.Println("All subscribed")
+			symbolsMutex.Unlock()
+		}
+	}(ticker)
+
+	// Handle binary data
+	go func(t *kite.TickerClient) {
+		for message := range t.BinaryTickerChan {
+
+			appendToFile("./binary/market_data_"+time.Now().Format(dateFormatConcise)+".bin.zstd", message)
+
+			data := &storage.Data{
+				Tickers: []*storage.Ticker{},
+			}
+			numOfPackets := binary.BigEndian.Uint16(message[0:2])
+			if numOfPackets > 0 {
+
+				message = message[2:]
+				for {
+					if numOfPackets == 0 {
+						break
+					}
+
+					numOfPackets--
+					packetSize := binary.BigEndian.Uint16(message[0:2])
+					packet := kite.Packet(message[2 : packetSize+2])
+					values := packet.ParseBinary(int(math.Min(64, float64(len(packet)))))
+
+					ticker := &storage.Ticker{
+						Depth: &storage.Depth{
+							Buy:  []*storage.Order{},
+							Sell: []*storage.Order{},
+						},
+					}
+					if len(values) >= 2 {
+						ticker.Token = values[0]
+						ticker.LastPrice = values[1]
+					}
+					switch len(values) {
+					case 2:
+					case 7:
+						ticker.High = values[2]
+						ticker.Low = values[3]
+						ticker.Open = values[4]
+						ticker.Close = values[5]
+						ticker.ExchangeTimestamp = values[6]
+					case 8:
+						ticker.High = values[2]
+						ticker.Low = values[3]
+						ticker.Open = values[4]
+						ticker.Close = values[5]
+						ticker.PriceChange = values[6]
+						ticker.ExchangeTimestamp = values[7]
+					case 11:
+						ticker.LastTradedQuantity = values[2]
+						ticker.AverageTradedPrice = values[3]
+						ticker.VolumeTraded = values[4]
+						ticker.TotalBuy = values[5]
+						ticker.TotalSell = values[6]
+						ticker.High = values[7]
+						ticker.Low = values[8]
+						ticker.Open = values[9]
+						ticker.Close = values[10]
+					case 16:
+						ticker.LastTradedQuantity = values[2]
+						ticker.AverageTradedPrice = values[3]
+						ticker.VolumeTraded = values[4]
+						ticker.TotalBuy = values[5]
+						ticker.TotalSell = values[6]
+						ticker.High = values[7]
+						ticker.Low = values[8]
+						ticker.Open = values[9]
+						ticker.Close = values[10]
+						ticker.LastTradedTimestamp = values[11]
+						ticker.OI = values[12]
+						ticker.OIHigh = values[13]
+						ticker.OILow = values[14]
+						ticker.ExchangeTimestamp = values[15]
+					default:
+						log.Println("unkown length of packet", len(values), values)
+					}
+
+					if len(packet) > 64 {
+
+						packet = packet[64:]
+
+						values := packet.ParseMarketDepth()
+						lobDepth := len(values) / 6
+
+						for {
+							if len(values) == 0 {
+
+								break
+							}
+							qty := values[0]
+							price := values[1]
+							orders := values[2]
+							if len(ticker.Depth.Buy) < lobDepth {
+								ticker.Depth.Buy = append(ticker.Depth.Buy, &storage.Order{Price: price, Quantity: qty, Orders: orders})
+							} else {
+
+								ticker.Depth.Sell = append(ticker.Depth.Sell, &storage.Order{Price: price, Quantity: qty, Orders: orders})
+							}
+							values = values[3:]
+
+						}
+					}
+					if len(message) > int(packetSize+2) {
+						message = message[packetSize+2:]
+					}
+					bytes, err := json.Marshal(ticker)
+					if err != nil {
+						log.Panicf("%s", err)
+					}
+					tokenData := tokenTradingsymbolMap[ticker.Token]
+					if tokenData.InstrumentType == "FUT" {
+						if nc.Status() != nats.CONNECTED {
+							continue
+						} else {
+							js.PublishAsync(fmt.Sprintf("FEED_FUT.%v.%v.%v", tokenData.Exchange, tokenData.Name, tokenData.Expiry), bytes)
+
+						}
+
+					} else if tokenData.InstrumentType == "CE" || tokenData.InstrumentType == "PE" {
+						if nc.Status() != nats.CONNECTED {
+							continue
+						} else {
+							js.PublishAsync(fmt.Sprintf("FEED_OPT.%v.%v.%v.%v.%v", tokenData.Exchange, tokenData.Name, tokenData.Expiry, tokenData.Strike, tokenData.InstrumentType), bytes)
+
+						}
+					} else if tokenData.InstrumentType == "EQ" {
+						if nc.Status() != nats.CONNECTED {
+							continue
+						} else {
+							js.PublishAsync(fmt.Sprintf("FEED_EQ.%v.%v", tokenData.Exchange, tokenData.Name), bytes)
+
+						}
+					}
+					data.Tickers = append(data.Tickers, ticker)
+
+				}
+			}
+			// bytes, err := proto.Marshal(data)
+			// if err != nil {
+			// 	log.Panicf("%s", err)
+			// }
+			// appendToFile("./binary/index_proto_"+time.Now().Format(dateFormatConcise)+".zstd", bytes)
+
+		}
+	}(ticker)
+
+	// Start serving
+	go ticker.Serve(ctx)
+	log.Println("Websocket service started")
+
+	// Wait for context cancellation
+	<-(*ctx).Done()
+	log.Println("Shutting down websocket service")
 
 }
 

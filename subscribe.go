@@ -26,7 +26,7 @@ func RandStringRunes(n int) string {
 }
 func Subscribe() {
 
-	nc, err := nats.Connect(os.Getenv("NATS_READ_URI"))
+	nc, err := nats.Connect(os.Getenv("TA_NATS_READ_URI"))
 	if err != nil {
 		log.Panic(err)
 	}
