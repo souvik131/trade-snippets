@@ -4,8 +4,9 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"github.com/robfig/cron"
+	"github.com/robfig/cron/v3"
 	"github.com/souvik131/trade-snippets/analytics"
+	"github.com/souvik131/trade-snippets/engine"
 )
 
 var (
@@ -13,17 +14,21 @@ var (
 )
 
 func main() {
-	analytics.Init()
 	if os.Getenv("TA_KITE_ID") == "" {
 		godotenv.Load()
+
+		os.Setenv("TA_NATS_URI", "nats://127.0.0.1:4222")
+		os.Setenv("DB_URI", "127.0.0.1:9000")
 	}
+
+	analytics.Init()
 	cronJob.AddFunc(os.Getenv("TA_CRON_STRING"), func() {
-		Upload()
+		engine.Upload()
 	})
 	cronJob.Start()
-	Write()
-	// Read(time.Now().Format(dateFormatConcise))
-	// Host()
-	// Subscribe()
 
+	engine.Subscribe()
+	engine.Write()
+	// engine.Read(time.Now().Format(dateFormatConcise))
+	// engine.Host()
 }

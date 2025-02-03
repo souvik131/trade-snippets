@@ -5,12 +5,13 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/souvik131/trade-snippets/notifications"
 	"github.com/souvik131/trade-snippets/ws"
@@ -37,7 +38,7 @@ func GetWebsocketClientForAPI(ctx *context.Context, token string /*, receiveBina
 }
 
 func getWebsocketClient(ctx *context.Context, rawQuery string /*, receiveBinaryTickers bool*/) (*TickerClient, error) {
-	log.Printf("websocket : start")
+	log.Infof("websocket : start")
 	go t.Send("websocket : start")
 	k := &TickerClient{
 		Client: &ws.Client{
@@ -84,7 +85,7 @@ func (k *TickerClient) Connect(ctx *context.Context) error {
 		}
 		return fmt.Errorf("%v", respBody)
 	}
-	log.Printf("websocket : client ready")
+	log.Infof("websocket : client ready")
 	go t.Send("websocket : client ready")
 	err = k.Client.Read(ctx)
 	if err != nil {
@@ -96,7 +97,7 @@ func (k *TickerClient) Connect(ctx *context.Context) error {
 func (k *TickerClient) Serve(ctx *context.Context) {
 
 	<-time.After(time.Millisecond)
-	log.Println("websocket : serve")
+	log.Info("websocket : serve")
 	go t.Send("websocket : serve")
 
 	ticker := time.NewTicker(time.Second)
@@ -110,7 +111,9 @@ func (k *TickerClient) Serve(ctx *context.Context) {
 		case reader := <-k.Client.ReaderChannel:
 			k.LastUpdatedTime.Store(time.Now().Unix())
 			if reader.Error != nil {
-				log.Panic(reader.Error)
+				log.Error("websocket reader error: ", reader.Error)
+				k.ErrorChan <- reader.Error
+				return
 			}
 			switch reader.MessageType {
 			case ws.TEXT:
@@ -119,7 +122,7 @@ func (k *TickerClient) Serve(ctx *context.Context) {
 				go k.onBinaryMessage(reader)
 
 			default:
-				log.Printf("recv: %v %v", reader.MessageType, reader.Message)
+				log.Infof("recv: %v %v", reader.MessageType, reader.Message)
 			}
 		}
 	}
@@ -132,7 +135,7 @@ func (k *TickerClient) Close(ctx *context.Context) error {
 func (k *TickerClient) Reconnect(ctx *context.Context) error {
 	err := k.Close(ctx)
 	if err != nil {
-		log.Printf("websocket : attempted to close, got response -> %v", err)
+		log.Infof("websocket : attempted to close, got response -> %v", err)
 		go t.Send("websocket : reconnecting")
 	}
 	err = k.Connect(ctx)
@@ -359,7 +362,7 @@ func (k *TickerClient) ParseBinary(message []byte) {
 			ticker.OILow = values[14]
 			ticker.ExchangeTimestamp = time.Unix(int64(values[15]), 0)
 		default:
-			log.Println("unkown length of packet", len(values), values)
+			log.Warn("unknown length of packet: ", len(values), " values: ", values)
 		}
 
 		if len(packet) > 64 {
@@ -399,11 +402,13 @@ func (k *TickerClient) onTextMessage(reader *ws.Reader) {
 		m := &Message{}
 		err := json.Unmarshal(reader.Message, m)
 		if err != nil {
-			log.Panic(err)
+			log.Error("error parsing request: ", err)
+			k.ErrorChan <- err
+			return
 		}
 		switch m.Type {
 		case "instruments_meta":
-			log.Printf("websocket : connected")
+			log.Infof("websocket : connected")
 			t.Send("websocket : connected")
 			k.ConnectChan <- struct{}{}
 		case "error":

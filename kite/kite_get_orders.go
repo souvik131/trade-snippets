@@ -13,8 +13,6 @@ func (kite *Kite) GetOrders(ctx *context.Context) ([]*OrderStatus, error) {
 	k := *(*kite).Creds
 	url := k["Url"] + "/orders"
 
-	// log.Println(url, k["token"])
-
 	headers := map[string]string{
 		"Connection":      "keep-alive",
 		"User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
@@ -47,8 +45,6 @@ func (kite *Kite) GetOrderHistory(ctx *context.Context, orderId string) ([]*Orde
 
 	k := *(*kite).Creds
 	url := k["Url"] + "/orders/" + orderId
-
-	// log.Println(url, k["token"])
 
 	headers := map[string]string{
 		"Connection":      "keep-alive",

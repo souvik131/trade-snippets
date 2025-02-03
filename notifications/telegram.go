@@ -2,11 +2,11 @@ package notifications
 
 import (
 	"context"
-	"log"
 	"os"
 	"strconv"
 
 	"github.com/bot-api/telegram"
+	log "github.com/sirupsen/logrus"
 )
 
 type Telegram struct {
@@ -33,6 +33,6 @@ func (t *Telegram) Send(message string) {
 	defer cancel()
 	_, err = api.Send(ctx, msg)
 	if err != nil {
-		log.Print(err)
+		log.Warn(err)
 	}
 }

@@ -1,4 +1,4 @@
-package main
+package engine
 
 import (
 	"bytes"
@@ -6,9 +6,9 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,13 +24,14 @@ import (
 	"github.com/klauspost/compress/zstd"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
+	log "github.com/sirupsen/logrus"
 	"github.com/souvik131/trade-snippets/kite"
 	"github.com/souvik131/trade-snippets/notifications"
 	"github.com/souvik131/trade-snippets/storage"
 	"google.golang.org/protobuf/proto"
 )
 
-var rotationInterval = 3.0
+var rotationInterval = 2.0
 var instrumentsPerRequest = 3000.0
 var dateFormatConcise = "20060102"
 var t = &notifications.Telegram{}
@@ -164,7 +165,7 @@ func Host() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Serving files from %s on http://localhost:8080", absDir)
+	log.Infof("Serving files from %s on http://localhost:8080", absDir)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
@@ -238,7 +239,7 @@ func saveFile(filePath string, data []byte) error {
 
 	bytesToSave := make([]byte, 8)
 	binary.BigEndian.PutUint64(bytesToSave, uint64(len(compressedData)))
-	log.Println(binary.BigEndian.Uint16(bytesToSave), uint64(len(compressedData)))
+	log.Info("Saving File : ", binary.BigEndian.Uint16(bytesToSave), uint64(len(compressedData)))
 	bytesToSave = append(bytesToSave, compressedData...)
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -250,8 +251,7 @@ func saveFile(filePath string, data []byte) error {
 }
 
 func Serve(ctx *context.Context, k *kite.Kite) {
-	log.Println(os.Getenv("TA_NATS_WRITE_URI"))
-	nc, err := nats.Connect(os.Getenv("TA_NATS_WRITE_URI"))
+	nc, err := nats.Connect(os.Getenv("TA_NATS_URI"))
 	if err != nil {
 		log.Panic(err)
 	}
@@ -299,7 +299,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 
 	saveFile("./binary/map_"+time.Now().Format(dateFormatConcise)+".proto.zstd", bytes)
 
-	log.Println("Instrument Map successfully written to file")
+	log.Info("Instrument Map successfully written to file")
 
 	k.TickerClients = []*kite.TickerClient{}
 	// Initialize token tracking
@@ -309,12 +309,12 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 	allTokens := []string{}
 
 	for _, data := range *kite.BrokerInstrumentTokens {
-		if data.Exchange == "NFO" || data.Exchange == "NFO-OPT" || data.Name == "SENSEX" {
+		if data.Exchange == "NSE" || data.Exchange == "NFO" || data.Exchange == "NFO-OPT" || data.Name == "SENSEX" {
 			allTokens = append(allTokens, data.TradingSymbol)
 		}
 	}
 	totalTokens := len(allTokens)
-	log.Printf("Total unique tokens to process: %d", totalTokens)
+	log.Infof("Total unique tokens to process: %d", totalTokens)
 
 	var symbolsMutex sync.Mutex
 	ticker, err := k.GetWebSocketClient(ctx /*, false*/)
@@ -327,7 +327,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 	// Handle websocket connection
 	go func(t *kite.TickerClient) {
 		for range t.ConnectChan {
-			log.Println("Websocket is connected")
+			log.Info("Websocket is connected")
 
 			// Start rotation
 			go func() {
@@ -352,12 +352,10 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 								if prevStart >= 0 {
 									prevEnd := start
 									t.Unsubscribe(ctx, allTokens[prevStart:prevEnd])
-									log.Printf("Unsubscribed from tokens %d-%d", prevStart, prevEnd)
 								}
 
 								// Subscribe to new chunk
 								t.SubscribeFull(ctx, allTokens[start:end])
-								log.Printf("Subscribed to tokens %d-%d", start, end)
 
 								// Sleep for rotation interval
 								<-time.After(time.Duration(rotationInterval) * time.Second)
@@ -376,8 +374,8 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 			if !processedSymbols[ticker.TradingSymbol] {
 				processedSymbols[ticker.TradingSymbol] = true
 				processed := atomic.AddInt64(&processedTokens, 1)
-				if processed%1000 == 0 || float64(processed)/float64(totalTokens) == 1 {
-					log.Printf("New token processed: %s (%d/%d - %.2f%%)",
+				if processed%10000 == 0 || float64(processed)/float64(totalTokens) == 1 {
+					log.Infof("New token processed: %s (%d/%d - %.2f%%)",
 						ticker.TradingSymbol,
 						processed,
 						totalTokens,
@@ -466,7 +464,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 						ticker.OILow = values[14]
 						ticker.ExchangeTimestamp = values[15]
 					default:
-						log.Println("unkown length of packet", len(values), values)
+						log.Info("unkown length of packet", len(values), values)
 					}
 
 					if len(packet) > 64 {
@@ -497,16 +495,20 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 					if len(message) > int(packetSize+2) {
 						message = message[packetSize+2:]
 					}
+
+					tokenData := tokenTradingsymbolMap[ticker.Token]
+					ticker.LotSize = tokenData.LotSize
 					bytes, err := json.Marshal(ticker)
 					if err != nil {
 						log.Panicf("%s", err)
 					}
-					tokenData := tokenTradingsymbolMap[ticker.Token]
+					// if tokenData.Name != "" && tokenData.InstrumentType != "" {
+
 					if tokenData.InstrumentType == "FUT" {
 						if nc.Status() != nats.CONNECTED {
 							continue
 						} else {
-							js.PublishAsync(fmt.Sprintf("FEED_FUT.%v.%v.%v", tokenData.Exchange, tokenData.Name, tokenData.Expiry), bytes)
+							js.PublishAsync(fmt.Sprintf("FEED_FUT.%v.%v.%v", tokenData.Exchange, url.QueryEscape(tokenData.Name), tokenData.Expiry), bytes)
 
 						}
 
@@ -514,17 +516,17 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 						if nc.Status() != nats.CONNECTED {
 							continue
 						} else {
-							js.PublishAsync(fmt.Sprintf("FEED_OPT.%v.%v.%v.%v.%v", tokenData.Exchange, tokenData.Name, tokenData.Expiry, tokenData.Strike, tokenData.InstrumentType), bytes)
-
+							js.PublishAsync(fmt.Sprintf("FEED_OPT.%v.%v.%v.%v.%v", tokenData.Exchange, url.QueryEscape(tokenData.Name), tokenData.Expiry, tokenData.Strike, tokenData.InstrumentType), bytes)
 						}
-					} else if tokenData.InstrumentType == "EQ" {
+					} else if tokenData.InstrumentType == "EQ" && tokenData.TradingSymbol != "" {
 						if nc.Status() != nats.CONNECTED {
 							continue
 						} else {
-							js.PublishAsync(fmt.Sprintf("FEED_EQ.%v.%v", tokenData.Exchange, tokenData.Name), bytes)
-
+							// log.Info(tokenData.InstrumentType, tokenData.TradingSymbol)
+							js.PublishAsync(fmt.Sprintf("FEED_EQ.%v.%v", tokenData.Exchange, url.QueryEscape(tokenData.TradingSymbol)), bytes)
 						}
 					}
+					// }
 					data.Tickers = append(data.Tickers, ticker)
 
 				}
@@ -540,11 +542,11 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 
 	// Start serving
 	go ticker.Serve(ctx)
-	log.Println("Websocket service started")
+	log.Info("Websocket service started")
 
 	// Wait for context cancellation
 	<-(*ctx).Done()
-	log.Println("Shutting down websocket service")
+	log.Info("Shutting down websocket service")
 
 }
 
@@ -555,7 +557,6 @@ func Upload() error {
 	bucket := os.Getenv("TA_DO_BUCKET")
 	endpoint := os.Getenv("TA_DO_ENDPOINT")
 	region := os.Getenv("TA_DO_REGION")
-	log.Println(region)
 	s3Config := &aws.Config{
 		Credentials:      credentials.NewStaticCredentials(key, secret, ""),
 		Endpoint:         aws.String(endpoint),

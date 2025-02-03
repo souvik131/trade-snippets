@@ -45,8 +45,9 @@ message Ticker{
 	uint32 OILow              =14;
 	uint32 PriceChange        =15;
 	uint32 LastTradedTimestamp=16;
-	uint32 ExchangeTimestamp  =17;
-	Depth  Depth              =18;
+	uint32 LotSize 			  =17;
+	uint32 ExchangeTimestamp  =18;
+	Depth  Depth              =19;
 }
 
 message Depth {

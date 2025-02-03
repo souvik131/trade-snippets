@@ -17,100 +17,154 @@ type Fields map[string]string
 type Schema map[LogType]log.Fields
 type LogType string
 
-const prefix string = "market"
+const (
+	prefix    = "market"
+	batchSize = 10000
+)
 
 var (
 	conn                 driver.Conn
-	mut                  = &sync.Mutex{}
 	DEFAULT_DATA_TYPE_CH = Fields{
-		"float":       "UInt32 DEFAULT -1 CODEC(Delta, ZSTD(3))", // Stores as value * 100
-		"int":         "Int32 DEFAULT -1 CODEC(Delta, ZSTD(3))",
-		"uint":        "UInt64 DEFAULT -1 CODEC(Delta, ZSTD(3))",
-		"string":      "LowCardinality(String)",
-		"array_float": "Array(UInt32) CODEC (Delta, ZSTD(3))",
-		"array_int":   "Array(UInt32) CODEC (Delta, ZSTD(3))",
+		"float32":   "Int32 DEFAULT -1 CODEC(Delta, ZSTD(3))",  // Stores as value * 100
+		"float64":   "Int64 DEFAULT -1 CODEC(Delta, ZSTD(3))",  // Stores as value * 100
+		"ufloat32":  "UInt32 DEFAULT -1 CODEC(Delta, ZSTD(3))", // Stores as value * 100
+		"ufloat64":  "UInt64 DEFAULT -1 CODEC(Delta, ZSTD(3))", // Stores as value * 100
+		"int32":     "Int32 DEFAULT -1 CODEC(Delta, ZSTD(3))",
+		"int64":     "Int64 DEFAULT -1 CODEC(Delta, ZSTD(3))",
+		"uint32":    "UInt32 DEFAULT -1 CODEC(Delta, ZSTD(3))",
+		"uint64":    "UInt64 DEFAULT -1 CODEC(Delta, ZSTD(3))",
+		"string":    "LowCardinality(String)",
+		"timestamp": "DateTime64(3) CODEC(Delta, ZSTD(3))",
 	}
 
-	MARKET_DATA LogType = "MARKET_DATA"
-	INDICATORS  LogType = "INDICATORS"
-	STATS_ARB   LogType = "STATS_ARB"
-	VOL_SKEW    LogType = "VOL_SKEW"
-	OPTIONS     LogType = "OPTIONS"
+	LIVE_DATA       LogType = "LIVE_DATA"
+	DERIVED_OPTIONS LogType = "DERIVED_OPTIONS"
+	GREEKS          LogType = "GREEKS"
 
 	schemas = Schema{
-		MARKET_DATA: {
-			"tradingsymbol":         "string",
+		LIVE_DATA: {
 			"exchange":              "string",
-			"last_price":            "float",
-			"open":                  "float",
-			"high":                  "float",
-			"low":                   "float",
-			"close":                 "float",
-			"volume":                "int",
-			"oi":                    "int",
-			"last_traded_timestamp": "int",
-			"buy_price":             "array_float",
-			"buy_quantity":          "array_int",
-			"sell_price":            "array_float",
-			"sell_quantity":         "array_int",
+			"script":                "string",
+			"expiry":                "string",
+			"strike":                "string",
+			"instrument_type":       "string",
+			"timestamp":             "timestamp",
+			"last_price":            "ufloat32",
+			"lot_size":              "ufloat32",
+			"open":                  "ufloat32",
+			"high":                  "ufloat32",
+			"low":                   "ufloat32",
+			"close":                 "ufloat32",
+			"volume":                "uint32",
+			"oi":                    "uint32",
+			"last_traded_timestamp": "timestamp",
+
+			"buy_price_1":     "ufloat32",
+			"buy_quantity_1":  "ufloat32",
+			"buy_order_1":     "ufloat32",
+			"sell_price_1":    "ufloat32",
+			"sell_quantity_1": "ufloat32",
+			"sell_order_1":    "ufloat32",
+
+			"buy_price_2":     "ufloat32",
+			"buy_quantity_2":  "ufloat32",
+			"buy_order_2":     "ufloat32",
+			"sell_price_2":    "ufloat32",
+			"sell_quantity_2": "ufloat32",
+			"sell_order_2":    "ufloat32",
+
+			"buy_price_3":     "ufloat32",
+			"buy_quantity_3":  "ufloat32",
+			"buy_order_3":     "ufloat32",
+			"sell_price_3":    "ufloat32",
+			"sell_quantity_3": "ufloat32",
+			"sell_order_3":    "ufloat32",
+
+			"buy_price_4":     "ufloat32",
+			"buy_quantity_4":  "ufloat32",
+			"buy_order_4":     "ufloat32",
+			"sell_price_4":    "ufloat32",
+			"sell_quantity_4": "ufloat32",
+			"sell_order_4":    "ufloat32",
+
+			"buy_price_5":     "ufloat32",
+			"buy_quantity_5":  "ufloat32",
+			"buy_order_5":     "ufloat32",
+			"sell_price_5":    "ufloat32",
+			"sell_quantity_5": "ufloat32",
+			"sell_order_5":    "ufloat32",
 		},
-		INDICATORS: {
-			"tradingsymbol":   "string",
-			"ema_5":           "float",
-			"ema_10":          "float",
-			"ema_50":          "float",
-			"rsi_14":          "float",
-			"macd":            "float",
-			"bollinger_upper": "float",
-			"bollinger_lower": "float",
-			"vwap":            "float",
-			"z_score":         "float",
-			"vwap_spread":     "float",
+		GREEKS: {
+			"exchange":        "string",
+			"script":          "string",
+			"expiry":          "string",
+			"strike":          "string",
+			"instrument_type": "string",
+			"timestamp":       "timestamp",
+			"delta":           "float32",
+			"gamma":           "float32",
+			"vega":            "float32",
+			"theta":           "float32",
+			"rho":             "float32",
 		},
-		STATS_ARB: {
-			"pair_1":         "string",
-			"pair_2":         "string",
-			"cointegration":  "float",
-			"spread":         "float",
-			"z_score_spread": "float",
-			"hedge_ratio":    "float",
-		},
-		VOL_SKEW: {
-			"script":                  "string",
-			"expiry":                  "string",
-			"realized_vol":            "float",
-			"implied_vol":             "float",
-			"volatility_risk_premium": "float",
-			"skew_ratio":              "float",
-			"risk_reversal":           "float",
-			"term_structure_slope":    "float",
-		},
-		OPTIONS: {
-			"tradingsymbol": "string",
-			"delta":         "float",
-			"gamma":         "float",
-			"vega":          "float",
-			"theta":         "float",
-			"rho":           "float",
+		DERIVED_OPTIONS: {
+			"script":         "string",
+			"expiry":         "string",
+			"timestamp":      "timestamp",
+			"atm_strike":     "ufloat32",
+			"atm_iv":         "ufloat32",
+			"straddle_price": "ufloat32",
 		},
 	}
+	mu sync.Mutex
 )
 
 func Init() {
+	dbURI := os.Getenv("DB_URI")
+	if dbURI == "" {
+		log.Panic("DB_URI environment variable is not set")
+	}
+
+	dbName := os.Getenv("DB_NAME")
+	if dbName == "" {
+		log.Panic("DB_NAME environment variable is not set")
+	}
+
 	var (
 		con, err = clickhouse.Open(&clickhouse.Options{
-			Addr: []string{os.Getenv("DB_URI")},
+			Addr: []string{dbURI},
 			Auth: clickhouse.Auth{
-				Database: os.Getenv("DB_NAME"),
+				Database: dbName,
 			},
+			Settings: clickhouse.Settings{
+				"max_execution_time": 60,
+			},
+			Compression: &clickhouse.Compression{
+				Method: clickhouse.CompressionLZ4,
+			},
+			DialTimeout:          time.Second * 30,
+			MaxOpenConns:         5,
+			MaxIdleConns:         5,
+			ConnMaxLifetime:      time.Hour,
+			ConnOpenStrategy:     clickhouse.ConnOpenInOrder,
+			BlockBufferSize:      10,
+			MaxCompressionBuffer: 10240,
 		})
 	)
 	if err != nil {
-		log.Panic(err)
+		log.Panicf("Failed to create database connection: %v", err)
 	}
-	mut.Lock()
+
+	// Test the connection
+	if err := con.Ping(context.Background()); err != nil {
+		log.Panicf("Failed to ping database: %v", err)
+	}
+
+	mu.Lock()
 	conn = con
-	mut.Unlock()
+	mu.Unlock()
+
+	log.Info("Successfully connected to ClickHouse database")
 
 	for name, f := range schemas {
 		dbName := fmt.Sprintf("%v_%v_log", prefix, strings.ToLower(string(name)))
@@ -133,19 +187,16 @@ func CreateTables(dbName string, f log.Fields) {
 		} else {
 			log.Panic("data_type_not_valid")
 		}
-		if typeOf == "string" {
+		if typeOf == "string" || typeOf == "timestamp" {
 			primaryKeyString += name + ", "
 		}
 	}
 
-	query := `CREATE TABLE IF NOT EXISTS ` + dbName + `(
-		timestamp DateTime64(3) CODEC(Delta, ZSTD(3)), ` + strings.Join(dataArr, ", ") + `
-	) ENGINE = ReplacingMergeTree  PRIMARY KEY (` + primaryKeyString + ` timestamp) ORDER BY (` + primaryKeyString + ` timestamp)`
-	log.Println(query)
+	query := `CREATE TABLE IF NOT EXISTS ` + dbName + `(` + strings.Join(dataArr, ", ") + `) ENGINE = ReplacingMergeTree  PRIMARY KEY (` + primaryKeyString + ` ) ORDER BY (` + primaryKeyString + ` )`
 
-	mut.Lock()
+	mu.Lock()
 	_, err := conn.Query(ctx, query)
-	mut.Unlock()
+	mu.Unlock()
 	if err != nil {
 		if exception, ok := err.(*clickhouse.Exception); ok {
 			fmt.Printf("Exception [%d] %s \n%s\n", exception.Code, exception.Message, exception.StackTrace)
@@ -154,33 +205,66 @@ func CreateTables(dbName string, f log.Fields) {
 	}
 }
 
-func StoreLogs(l LogType, f *log.Fields) {
+func (l LogType) BatchStore(fields []*log.Fields) {
 	if conn == nil {
 		log.Panic("analytics_not_initiated")
 	}
-	keyArr, valueArr := make([]string, 0), make([]string, 0)
-	for key, val := range *f {
-		if typeOf, ok := schemas[l][key]; ok {
-			if typeOf == "int" || typeOf == "float" {
-				valueArr = append(valueArr, fmt.Sprintf("%v", val))
-			} else {
-				valueArr = append(valueArr, fmt.Sprintf("'%v'", val))
-			}
+	if len(fields) == 0 {
+		return
+	}
+
+	ctx := context.Background()
+	dbName := fmt.Sprintf("%v_%v_log", prefix, strings.ToLower(string(l)))
+	var keyArr []string
+
+	// Get keys from first record to ensure consistent column order
+	for key := range *fields[0] {
+		if _, ok := schemas[l][key]; ok {
 			keyArr = append(keyArr, key)
-		} else {
-			log.Panic("fields_do_not_match")
 		}
 	}
-	keyArr = append(keyArr, "timestamp")
-	valueArr = append(valueArr, fmt.Sprintf("'%v'", time.Now().UnixMilli()))
 
-	dbName := fmt.Sprintf("%v_%v_log", prefix, strings.ToLower(string(l)))
-	query := "INSERT INTO " + dbName + " (" + strings.Join(keyArr, ", ") + ") VALUES (" + strings.Join(valueArr, ", ") + ") ;"
+	// Process records in batches
+	for i := 0; i < len(fields); i += batchSize {
+		end := i + batchSize
+		if end > len(fields) {
+			end = len(fields)
+		}
 
-	mut.Lock()
-	_, err := conn.Query(context.Background(), query)
-	mut.Unlock()
-	if err != nil {
-		log.Panic(err)
+		log.Infof("Saving %v records to %v, from index %v to %v\n", end-i, dbName, i, end)
+		mu.Lock()
+		batch, err := conn.PrepareBatch(ctx, "INSERT INTO "+dbName+" ("+strings.Join(keyArr, ", ")+")")
+		if err != nil {
+			mu.Unlock()
+			log.Panicf("Failed to prepare batch: %v", err)
+		}
+
+		// Process each record in the current batch
+		for _, f := range fields[i:end] {
+			values := make([]interface{}, 0, len(keyArr))
+			for _, key := range keyArr {
+				if val, ok := (*f)[key]; ok {
+					if _, ok := schemas[l][key]; ok {
+
+						values = append(values, val)
+
+					}
+				} else {
+					// Handle missing field with default value
+					values = append(values, -1)
+				}
+			}
+
+			if err := batch.Append(values...); err != nil {
+				mu.Unlock()
+				log.Panicf("Failed to append to batch: %v", err)
+			}
+		}
+
+		if err := batch.Send(); err != nil {
+			mu.Unlock()
+			log.Panicf("Failed to send batch: %v", err)
+		}
+		mu.Unlock()
 	}
 }
