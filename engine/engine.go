@@ -283,7 +283,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 	allTokens := []string{}
 
 	for _, data := range *kite.BrokerInstrumentTokens {
-		if data.Exchange == "NSE" || data.Exchange == "NFO" || data.Exchange == "NFO-OPT" || data.Name == "SENSEX" {
+		if data.Exchange == "NSE" || data.Exchange == "NFO" || data.Exchange == "NFO-OPT" || data.Name == "SENSEX" || data.Name == "BANKEX" {
 			allTokens = append(allTokens, data.TradingSymbol)
 		}
 	}
