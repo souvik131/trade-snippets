@@ -39,6 +39,7 @@ services:
     image: grafana/grafana:10.0.3
     user: "0"
     volumes:
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini
       - ./grafana/data:/var/lib/grafana
     ports:
       - "127.0.0.1:3000:3000"
