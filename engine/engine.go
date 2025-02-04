@@ -7,10 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -143,30 +141,6 @@ func Read(dateStr string) {
 		}
 	}
 
-}
-
-func Host() {
-
-	dir := "./web"
-	fileServer := http.FileServer(http.Dir(dir))
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" {
-			indexPath := filepath.Join(dir, "index.html")
-			if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-				http.NotFound(w, r)
-				return
-			}
-			http.ServeFile(w, r, indexPath)
-		} else {
-			fileServer.ServeHTTP(w, r)
-		}
-	})
-	absDir, err := filepath.Abs(dir)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Infof("Serving files from %s on http://localhost:8080", absDir)
-	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
 func compress(input []byte) ([]byte, error) {
@@ -393,8 +367,11 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 	// Handle binary data
 	go func(t *kite.TickerClient) {
 		for message := range t.BinaryTickerChan {
+			nowTimeValue := time.Now().Hour()*60 + time.Now().Minute()
 
-			appendToFile("./binary/market_data_"+time.Now().Format(dateFormatConcise)+".bin.zstd", message)
+			if 9*60+15 <= nowTimeValue && nowTimeValue <= 15*60+30 {
+				appendToFile("./binary/market_data_"+time.Now().Format(dateFormatConcise)+".bin.zstd", message)
+			}
 
 			data := &storage.Data{
 				Tickers: []*storage.Ticker{},
