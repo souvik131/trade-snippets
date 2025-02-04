@@ -1,3 +1,3 @@
 #!/bin/sh
 
-docker up -d;docker system prune -a;
+git pull origin do;docker up -d --force-recreate --build fetch;docker system prune -a;
