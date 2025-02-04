@@ -35,7 +35,21 @@ func Subscribe() {
 	c := cron.New()
 
 	// Add cron job to run every minute
-	_, err = c.AddFunc("* * * * *", func() {
+	_, err = c.AddFunc("15-59 9 * * 1-5", func() {
+		fetchLatestFeeds(js, time.Now())
+	})
+	if err != nil {
+		log.Warnf("Error adding cron job: %v", err)
+		return
+	}
+	_, err = c.AddFunc("* 10-14 * * 1-5", func() {
+		fetchLatestFeeds(js, time.Now())
+	})
+	if err != nil {
+		log.Warnf("Error adding cron job: %v", err)
+		return
+	}
+	_, err = c.AddFunc("0-30 15 * * 1-5", func() {
 		fetchLatestFeeds(js, time.Now())
 	})
 	if err != nil {
@@ -254,12 +268,13 @@ func fetchLatestFeeds(js jetstream.JetStream, now time.Time) {
 	allGreeks := []*log.Fields{}
 	allDerivedOptions := []*log.Fields{}
 	type DerivedOptions struct {
-		atm           float64
-		atmCeIv       float64
-		atmPeIv       float64
-		atmCeTime     uint32
-		atmPeTime     uint32
-		straddlePrice float64
+		atm             float64
+		atmCeIv         float64
+		atmPeIv         float64
+		atmCeTime       uint32
+		atmPeTime       uint32
+		straddlePrice   float64
+		underlyingPrice float32
 	}
 
 	derivedOptionsByScriptExpiry := map[string]*DerivedOptions{}
@@ -286,7 +301,7 @@ func fetchLatestFeeds(js jetstream.JetStream, now time.Time) {
 			instrumentType = values[5]
 
 			strikeFloat, _ := strconv.ParseFloat(strike, 64)
-			undelyingPrice := 0.0
+			underlyingPrice := 0.0
 
 			otherOptionType := "CE"
 			if instrumentType == "CE" {
@@ -294,33 +309,33 @@ func fetchLatestFeeds(js jetstream.JetStream, now time.Time) {
 			}
 			straddlePrice := 0.0
 
-			price := float64((ticker.Depth.Buy[0].Price + ticker.Depth.Sell[0].Price)) / 200
+			price := (float64(ticker.Depth.Buy[0].Price*ticker.Depth.Buy[0].Quantity) + float64(ticker.Depth.Sell[0].Price*ticker.Depth.Sell[0].Quantity)) / (100 * (float64(ticker.Depth.Buy[0].Quantity) + float64(ticker.Depth.Sell[0].Quantity)))
 
 			if undelyingTicker, ok := dataMap[fmt.Sprintf("FEED_FUT.%v.%v.%v", exchange, script, expiry)]; ok {
-				undelyingPrice = float64((undelyingTicker.Depth.Buy[0].Price + undelyingTicker.Depth.Sell[0].Price)) / 200
+				underlyingPrice = (float64(undelyingTicker.Depth.Buy[0].Price*undelyingTicker.Depth.Buy[0].Quantity) + float64(undelyingTicker.Depth.Sell[0].Price*undelyingTicker.Depth.Sell[0].Quantity)) / (100 * (float64(undelyingTicker.Depth.Buy[0].Quantity) + float64(undelyingTicker.Depth.Sell[0].Quantity)))
 
 				if otherOptionTicker, ok := dataMap[fmt.Sprintf("FEED_OPT.%v.%v.%v.%v.%v", exchange, script, expiry, strike, otherOptionType)]; ok {
-					otherOptionPrice := float64((otherOptionTicker.Depth.Buy[0].Price + otherOptionTicker.Depth.Sell[0].Price)) / 200
+					otherOptionPrice := (float64(otherOptionTicker.Depth.Buy[0].Price*otherOptionTicker.Depth.Buy[0].Quantity) + float64(otherOptionTicker.Depth.Sell[0].Price*otherOptionTicker.Depth.Sell[0].Quantity)) / (100 * (float64(otherOptionTicker.Depth.Buy[0].Quantity) + float64(otherOptionTicker.Depth.Sell[0].Quantity)))
 					if otherOptionPrice > 0 {
 						straddlePrice = price + otherOptionPrice
 					}
 				}
 			} else if otherOptionTicker, ok := dataMap[fmt.Sprintf("FEED_OPT.%v.%v.%v.%v.%v", exchange, script, expiry, strike, otherOptionType)]; ok {
-				otherOptionPrice := float64((otherOptionTicker.Depth.Buy[0].Price + otherOptionTicker.Depth.Sell[0].Price)) / 200
+				otherOptionPrice := (float64(otherOptionTicker.Depth.Buy[0].Price*otherOptionTicker.Depth.Buy[0].Quantity) + float64(otherOptionTicker.Depth.Sell[0].Price*otherOptionTicker.Depth.Sell[0].Quantity)) / (100 * (float64(otherOptionTicker.Depth.Buy[0].Quantity) + float64(otherOptionTicker.Depth.Sell[0].Quantity)))
 				if otherOptionPrice > 0 {
 					if instrumentType == "CE" {
-						undelyingPrice = strikeFloat + price - otherOptionPrice
+						underlyingPrice = strikeFloat + price - otherOptionPrice
 					} else {
-						undelyingPrice = strikeFloat - price + otherOptionPrice
+						underlyingPrice = strikeFloat - price + otherOptionPrice
 					}
 					straddlePrice = price + otherOptionPrice
 				}
 			}
 
-			if undelyingPrice > 0 {
+			if underlyingPrice > 0 {
 				hrsLeft := getHoursToExpiry(*stringToTime(expiry))
-				g := greeks.RunGreek(undelyingPrice, hrsLeft, strikeFloat, price, instrumentType == "CE")
-				// log.Info(g.Iv, undelyingPrice, hrsLeft, strikeFloat, price, instrumentType == "CE")
+				g := greeks.RunGreek(underlyingPrice, hrsLeft, strikeFloat, price, instrumentType == "CE")
+				// log.Info(g.Iv, underlyingPrice, hrsLeft, strikeFloat, price, instrumentType == "CE")
 				allGreeks = append(allGreeks, &log.Fields{
 					"exchange":           exchange,
 					"script":             script,
@@ -342,9 +357,10 @@ func fetchLatestFeeds(js jetstream.JetStream, now time.Time) {
 						straddlePrice: straddlePrice,
 					}
 				}
-				if math.Abs(undelyingPrice-strikeFloat) <= math.Abs(undelyingPrice-derivedOptionsByScriptExpiry[scriptExpiry].atm) {
+				if math.Abs(underlyingPrice-strikeFloat) <= math.Abs(underlyingPrice-derivedOptionsByScriptExpiry[scriptExpiry].atm) {
 					derivedOptionsByScriptExpiry[scriptExpiry].atm = strikeFloat
 					derivedOptionsByScriptExpiry[scriptExpiry].straddlePrice = straddlePrice
+					derivedOptionsByScriptExpiry[scriptExpiry].underlyingPrice = float32(underlyingPrice)
 					if instrumentType == "CE" {
 						derivedOptionsByScriptExpiry[scriptExpiry].atmCeIv = g.Iv
 						derivedOptionsByScriptExpiry[scriptExpiry].atmCeTime = ticker.ExchangeTimestamp
@@ -427,12 +443,13 @@ func fetchLatestFeeds(js jetstream.JetStream, now time.Time) {
 		t := math.Max(float64(data.atmCeTime), float64(data.atmPeTime))
 		if data.straddlePrice > 0 {
 			allDerivedOptions = append(allDerivedOptions, &log.Fields{
-				"script":         script,
-				"expiry":         expiry,
-				"atm_strike":     int32(math.Round(data.atm * 100)),
-				"atm_iv":         int32((data.atmCeIv + data.atmPeIv) * 10000 / 2),
-				"timestamp":      time.Unix(int64(t), 0),
-				"straddle_price": data.straddlePrice,
+				"script":           script,
+				"expiry":           expiry,
+				"atm_strike":       int32(math.Round(data.atm * 100)),
+				"atm_iv":           int32((data.atmCeIv + data.atmPeIv) * 10000 / 2),
+				"timestamp":        time.Unix(int64(t), 0),
+				"straddle_price":   data.straddlePrice * 100,
+				"underlying_price": data.underlyingPrice * 100,
 			})
 		}
 	}

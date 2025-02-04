@@ -108,12 +108,13 @@ var (
 			"rho":             "float32",
 		},
 		DERIVED_OPTIONS: {
-			"script":         "string",
-			"expiry":         "string",
-			"timestamp":      "timestamp",
-			"atm_strike":     "ufloat32",
-			"atm_iv":         "ufloat32",
-			"straddle_price": "ufloat32",
+			"script":           "string",
+			"expiry":           "string",
+			"timestamp":        "timestamp",
+			"atm_strike":       "ufloat32",
+			"atm_iv":           "ufloat32",
+			"straddle_price":   "ufloat32",
+			"underlying_price": "ufloat32",
 		},
 	}
 	mu sync.Mutex
