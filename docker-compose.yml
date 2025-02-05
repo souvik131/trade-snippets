@@ -1,7 +1,7 @@
 version: "3"
 services:
   nats:
-    image: nats:2.10.25
+    image: nats:2.10.18
     ports:
       - 127.0.0.1:4222:4222
       - 127.0.0.1:8222:8222
