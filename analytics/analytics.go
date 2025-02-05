@@ -107,6 +107,7 @@ var (
 			"theta":           "float32",
 			"rho":             "float32",
 			"iv":              "float32",
+			"lot_size":        "ufloat32",
 		},
 		DERIVED_OPTIONS: {
 			"script":           "string",

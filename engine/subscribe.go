@@ -339,6 +339,7 @@ func fetchLatestFeeds(js jetstream.JetStream) {
 					"vega":            int32(math.Round(g.Vega * 100)),
 					"rho":             int32(math.Round(g.Rho * 100)),
 					"iv":              int32(math.Round(g.Iv * 10000)),
+					"lot_size":        ticker.LotSize,
 					"timestamp":       time.Unix(int64(ticker.ExchangeTimestamp), 0),
 				})
 				scriptExpiry := fmt.Sprintf("%v.%v", script, expiry)
