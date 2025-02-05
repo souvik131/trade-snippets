@@ -22,7 +22,7 @@ func main() {
 	}
 
 	analytics.Init()
-	cronJob.AddFunc(os.Getenv("0 18 * * 1-5"), func() {
+	cronJob.AddFunc(os.Getenv("15 18 * * *"), func() {
 		engine.Upload()
 	})
 	cronJob.Start()
