@@ -36,21 +36,21 @@ func Subscribe() {
 
 	// Add cron job to run every minute
 	_, err = c.AddFunc("15-59 9 * * 1-5", func() {
-		fetchLatestFeeds(js, time.Now())
+		fetchLatestFeeds(js)
 	})
 	if err != nil {
 		log.Warnf("Error adding cron job: %v", err)
 		return
 	}
 	_, err = c.AddFunc("* 10-14 * * 1-5", func() {
-		fetchLatestFeeds(js, time.Now())
+		fetchLatestFeeds(js)
 	})
 	if err != nil {
 		log.Warnf("Error adding cron job: %v", err)
 		return
 	}
 	_, err = c.AddFunc("0-30 15 * * 1-5", func() {
-		fetchLatestFeeds(js, time.Now())
+		fetchLatestFeeds(js)
 	})
 	if err != nil {
 		log.Warnf("Error adding cron job: %v", err)
@@ -173,7 +173,7 @@ func getHolidaysCount(expiry time.Time) float64 {
 	return float64(holidaysCount)
 }
 
-func fetchLatestFeeds(js jetstream.JetStream, now time.Time) {
+func fetchLatestFeeds(js jetstream.JetStream) {
 	log.Info("Fetching latest feeds...")
 
 	if os.Getenv("NATS_ENABLED") == "1" {
