@@ -235,16 +235,14 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 		log.Panic(err)
 	}
 
-	if os.Getenv("NATS_ENABLED") == "1" {
-		_, err = js.CreateOrUpdateStream(*ctx, jetstream.StreamConfig{
-			Name:              "FEED",
-			Subjects:          []string{"FEED_EQ.*.*", "FEED_FUT.*.*.*", "FEED_OPT.*.*.*.*.*"},
-			MaxMsgsPerSubject: 1,
-			Storage:           jetstream.MemoryStorage,
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
+	_, err = js.CreateOrUpdateStream(*ctx, jetstream.StreamConfig{
+		Name:              "FEED",
+		Subjects:          []string{"FEED_EQ.*.*", "FEED_FUT.*.*.*", "FEED_OPT.*.*.*.*.*"},
+		MaxMsgsPerSubject: 1,
+		Storage:           jetstream.MemoryStorage,
+	})
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	tokenTradingsymbolMap := map[uint32]*storage.TickerMap{}
@@ -498,27 +496,12 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 
 					if subject != "" {
 
-						if os.Getenv("NATS_ENABLED") == "1" {
-							if nc.Status() != nats.CONNECTED {
-								continue
-							} else {
-								js.PublishAsync(subject, bytes)
-							}
+						if nc.Status() != nats.CONNECTED {
+							continue
 						} else {
-
-							storage.DataMapMutex.Lock()
-							for len(ticker.Depth.Buy) < 5 {
-								dummyBuy := storage.Order{}
-								ticker.Depth.Buy = append(ticker.Depth.Buy, &dummyBuy)
-							}
-
-							for len(ticker.Depth.Sell) < 5 {
-								dummySell := storage.Order{}
-								ticker.Depth.Sell = append(ticker.Depth.Sell, &dummySell)
-							}
-							storage.DataMap[subject] = ticker
-							storage.DataMapMutex.Unlock()
+							js.PublishAsync(subject, bytes)
 						}
+
 					}
 
 				}

@@ -176,86 +176,86 @@ func getHolidaysCount(expiry time.Time) float64 {
 func fetchLatestFeeds(js jetstream.JetStream) {
 	log.Info("Fetching latest feeds...")
 
-	if os.Getenv("NATS_ENABLED") == "1" {
-		// Create a channel to signal completion
-		done := make(chan struct{})
-		closeOnce := sync.Once{}
+	// Create a channel to signal completion
+	done := make(chan struct{})
+	closeOnce := sync.Once{}
 
-		ctx := context.Background()
-		jsc, err := js.CreateOrUpdateConsumer(ctx, "FEED", jetstream.ConsumerConfig{
-			Name:           "GET_LATEST_FEED",
-			AckPolicy:      jetstream.AckNonePolicy,
-			DeliverPolicy:  jetstream.DeliverAllPolicy,
-			FilterSubjects: []string{},
-		})
+	ctx := context.Background()
+	jsc, err := js.CreateOrUpdateConsumer(ctx, "FEED", jetstream.ConsumerConfig{
+		Name:           "GET_LATEST_FEED",
+		AckPolicy:      jetstream.AckNonePolicy,
+		DeliverPolicy:  jetstream.DeliverAllPolicy,
+		FilterSubjects: []string{},
+	})
+	if err != nil {
+		log.Panic(err)
+	}
+	scriptsCount := 0
+
+	// Declare msgs before the goroutine
+	var mu sync.Mutex
+	dataMap := map[string]*storage.Ticker{}
+	msgs, err := jsc.Consume(func(msg jetstream.Msg) {
+		b := msg.Data()
+		s := msg.Subject()
+
+		t := &storage.Ticker{}
+		err := json.Unmarshal(b, t)
 		if err != nil {
-			log.Panic(err)
+			log.Warn(err)
 		}
-		scriptsCount := 0
 
-		// Declare msgs before the goroutine
+		// log.Infof("%s : %+v \n\n", s, t)
+		mu.Lock()
+		for len(t.Depth.Buy) < 5 {
+			dummyBuy := storage.Order{}
+			t.Depth.Buy = append(t.Depth.Buy, &dummyBuy)
+		}
 
-		msgs, err := jsc.Consume(func(msg jetstream.Msg) {
-			b := msg.Data()
-			s := msg.Subject()
+		for len(t.Depth.Sell) < 5 {
+			dummySell := storage.Order{}
+			t.Depth.Sell = append(t.Depth.Sell, &dummySell)
+		}
+		dataMap[s] = t
+		mu.Unlock()
 
-			t := &storage.Ticker{}
-			err := json.Unmarshal(b, t)
-			if err != nil {
-				log.Warn(err)
-			}
-
-			// log.Infof("%s : %+v \n\n", s, t)
-			storage.DataMapMutex.Lock()
-			for len(t.Depth.Buy) < 5 {
-				dummyBuy := storage.Order{}
-				t.Depth.Buy = append(t.Depth.Buy, &dummyBuy)
-			}
-
-			for len(t.Depth.Sell) < 5 {
-				dummySell := storage.Order{}
-				t.Depth.Sell = append(t.Depth.Sell, &dummySell)
-			}
-			storage.DataMap[s] = t
-			storage.DataMapMutex.Unlock()
-
-			if err := json.Unmarshal(b, t); err != nil {
-				log.Warnf("Error unmarshaling message: %v", err)
-				return
-			}
-			// If no more pending messages, signal completion
-			meta, err := msg.Metadata()
-			if err != nil {
-				log.Warnf("Error getting metadata: %v", err)
-				return
-			}
-			scriptsCount++
-			if meta.NumPending == 0 {
-				closeOnce.Do(func() {
-					close(done)
-				})
-			}
-			if scriptsCount%10000 == 0 {
-				log.Info(scriptsCount, " messages processed")
-			}
-		})
+		if err := json.Unmarshal(b, t); err != nil {
+			log.Warnf("Error unmarshaling message: %v", err)
+			return
+		}
+		// If no more pending messages, signal completion
+		meta, err := msg.Metadata()
 		if err != nil {
-			log.Warnf("Error in consume: %v", err)
+			log.Warnf("Error getting metadata: %v", err)
+			return
+		}
+		scriptsCount++
+		if meta.NumPending == 0 {
 			closeOnce.Do(func() {
 				close(done)
 			})
-			return
 		}
-
-		// Wait for either completion or timeout
-		<-done
-		defer msgs.Stop()
-		log.Info(scriptsCount, ", all messages processed")
+		if scriptsCount%10000 == 0 {
+			log.Info(scriptsCount, " messages processed")
+		}
+	})
+	if err != nil {
+		log.Warnf("Error in consume: %v", err)
+		closeOnce.Do(func() {
+			close(done)
+		})
+		return
 	}
+
+	// Wait for either completion or timeout
+	<-done
+	defer msgs.Stop()
+	log.Info(scriptsCount, ", all messages processed")
+
 	//save the required data to clickhouse
 
-	storage.DataMapMutex.Lock()
-	allData := make([]*log.Fields, 0, len(storage.DataMap))
+	mu.Lock()
+	allData := make([]*log.Fields, 0, len(dataMap))
 	allGreeks := []*log.Fields{}
 	allDerivedOptions := []*log.Fields{}
 	type DerivedOptions struct {
@@ -270,7 +270,7 @@ func fetchLatestFeeds(js jetstream.JetStream) {
 
 	derivedOptionsByScriptExpiry := map[string]*DerivedOptions{}
 
-	for s, ticker := range storage.DataMap {
+	for s, ticker := range dataMap {
 
 		values := strings.Split(s, ".")
 		typeOfInstrument := values[0]
@@ -302,16 +302,16 @@ func fetchLatestFeeds(js jetstream.JetStream) {
 
 			price := (float64(ticker.Depth.Buy[0].Price*ticker.Depth.Buy[0].Quantity) + float64(ticker.Depth.Sell[0].Price*ticker.Depth.Sell[0].Quantity)) / (100 * (float64(ticker.Depth.Buy[0].Quantity) + float64(ticker.Depth.Sell[0].Quantity)))
 
-			if undelyingTicker, ok := storage.DataMap[fmt.Sprintf("FEED_FUT.%v.%v.%v", exchange, script, expiry)]; ok {
+			if undelyingTicker, ok := dataMap[fmt.Sprintf("FEED_FUT.%v.%v.%v", exchange, script, expiry)]; ok {
 				underlyingPrice = (float64(undelyingTicker.Depth.Buy[0].Price*undelyingTicker.Depth.Buy[0].Quantity) + float64(undelyingTicker.Depth.Sell[0].Price*undelyingTicker.Depth.Sell[0].Quantity)) / (100 * (float64(undelyingTicker.Depth.Buy[0].Quantity) + float64(undelyingTicker.Depth.Sell[0].Quantity)))
 
-				if otherOptionTicker, ok := storage.DataMap[fmt.Sprintf("FEED_OPT.%v.%v.%v.%v.%v", exchange, script, expiry, strike, otherOptionType)]; ok {
+				if otherOptionTicker, ok := dataMap[fmt.Sprintf("FEED_OPT.%v.%v.%v.%v.%v", exchange, script, expiry, strike, otherOptionType)]; ok {
 					otherOptionPrice := (float64(otherOptionTicker.Depth.Buy[0].Price*otherOptionTicker.Depth.Buy[0].Quantity) + float64(otherOptionTicker.Depth.Sell[0].Price*otherOptionTicker.Depth.Sell[0].Quantity)) / (100 * (float64(otherOptionTicker.Depth.Buy[0].Quantity) + float64(otherOptionTicker.Depth.Sell[0].Quantity)))
 					if otherOptionPrice > 0 {
 						straddlePrice = price + otherOptionPrice
 					}
 				}
-			} else if otherOptionTicker, ok := storage.DataMap[fmt.Sprintf("FEED_OPT.%v.%v.%v.%v.%v", exchange, script, expiry, strike, otherOptionType)]; ok {
+			} else if otherOptionTicker, ok := dataMap[fmt.Sprintf("FEED_OPT.%v.%v.%v.%v.%v", exchange, script, expiry, strike, otherOptionType)]; ok {
 				otherOptionPrice := (float64(otherOptionTicker.Depth.Buy[0].Price*otherOptionTicker.Depth.Buy[0].Quantity) + float64(otherOptionTicker.Depth.Sell[0].Price*otherOptionTicker.Depth.Sell[0].Quantity)) / (100 * (float64(otherOptionTicker.Depth.Buy[0].Quantity) + float64(otherOptionTicker.Depth.Sell[0].Quantity)))
 				if otherOptionPrice > 0 {
 					if instrumentType == "CE" {
@@ -423,7 +423,7 @@ func fetchLatestFeeds(js jetstream.JetStream) {
 
 	}
 
-	storage.DataMapMutex.Unlock()
+	mu.Unlock()
 	log.Info("Saving to DB")
 	analytics.LIVE_DATA.BatchStore(allData)
 	analytics.GREEKS.BatchStore(allGreeks)
