@@ -22,7 +22,7 @@ func main() {
 	}
 
 	analytics.Init()
-	cronJob.AddFunc(os.Getenv("TA_CRON_STRING"), func() {
+	cronJob.AddFunc(os.Getenv("45 17 * * 1-5"), func() {
 		engine.Upload()
 	})
 	cronJob.Start()
