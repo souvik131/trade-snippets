@@ -21,7 +21,6 @@ services:
       - "127.0.0.1:9000:9000"
     volumes:
       - ./clickhouse/data:/var/lib/clickhouse
-      - ./clickhouse/storage_config.xml:/etc/clickhouse-server/config.d/storage_config.xml
     restart: always
   fetch:
     build:
