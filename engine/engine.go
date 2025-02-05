@@ -225,6 +225,7 @@ func saveFile(filePath string, data []byte) error {
 }
 
 func Serve(ctx *context.Context, k *kite.Kite) {
+
 	nc, err := nats.Connect(os.Getenv("TA_NATS_URI"))
 	if err != nil {
 		log.Panic(err)
@@ -234,14 +235,16 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 		log.Panic(err)
 	}
 
-	_, err = js.CreateOrUpdateStream(*ctx, jetstream.StreamConfig{
-		Name:              "FEED",
-		Subjects:          []string{"FEED_EQ.*.*", "FEED_FUT.*.*.*", "FEED_OPT.*.*.*.*.*"},
-		MaxMsgsPerSubject: 1,
-		Storage:           jetstream.MemoryStorage,
-	})
-	if err != nil {
-		log.Fatal(err)
+	if os.Getenv("NATS_ENABLED") == "1" {
+		_, err = js.CreateOrUpdateStream(*ctx, jetstream.StreamConfig{
+			Name:              "FEED",
+			Subjects:          []string{"FEED_EQ.*.*", "FEED_FUT.*.*.*", "FEED_OPT.*.*.*.*.*"},
+			MaxMsgsPerSubject: 1,
+			Storage:           jetstream.MemoryStorage,
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	tokenTradingsymbolMap := map[uint32]*storage.TickerMap{}
@@ -373,9 +376,9 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 				appendToFile("./binary/market_data_"+time.Now().Format(dateFormatConcise)+".bin.zstd", message)
 			}
 
-			data := &storage.Data{
-				Tickers: []*storage.Ticker{},
-			}
+			// data := &storage.Data{
+			// 	Tickers: []*storage.Ticker{},
+			// }
 			numOfPackets := binary.BigEndian.Uint16(message[0:2])
 			if numOfPackets > 0 {
 
@@ -480,39 +483,42 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 						log.Panicf("%s", err)
 					}
 					// if tokenData.Name != "" && tokenData.InstrumentType != "" {
-
+					subject := ""
 					if tokenData.InstrumentType == "FUT" {
-						if nc.Status() != nats.CONNECTED {
-							continue
-						} else {
-							js.PublishAsync(fmt.Sprintf("FEED_FUT.%v.%v.%v", tokenData.Exchange, url.QueryEscape(tokenData.Name), tokenData.Expiry), bytes)
-
-						}
+						subject = fmt.Sprintf("FEED_FUT.%v.%v.%v", tokenData.Exchange, url.QueryEscape(tokenData.Name), tokenData.Expiry)
 
 					} else if tokenData.InstrumentType == "CE" || tokenData.InstrumentType == "PE" {
-						if nc.Status() != nats.CONNECTED {
-							continue
-						} else {
-							js.PublishAsync(fmt.Sprintf("FEED_OPT.%v.%v.%v.%v.%v", tokenData.Exchange, url.QueryEscape(tokenData.Name), tokenData.Expiry, tokenData.Strike, tokenData.InstrumentType), bytes)
-						}
+						subject = fmt.Sprintf("FEED_OPT.%v.%v.%v.%v.%v", tokenData.Exchange, url.QueryEscape(tokenData.Name), tokenData.Expiry, tokenData.Strike, tokenData.InstrumentType)
 					} else if tokenData.InstrumentType == "EQ" && tokenData.TradingSymbol != "" {
-						if nc.Status() != nats.CONNECTED {
-							continue
-						} else {
-							// log.Info(tokenData.InstrumentType, tokenData.TradingSymbol)
-							js.PublishAsync(fmt.Sprintf("FEED_EQ.%v.%v", tokenData.Exchange, url.QueryEscape(tokenData.TradingSymbol)), bytes)
-						}
+						subject = fmt.Sprintf("FEED_EQ.%v.%v", tokenData.Exchange, url.QueryEscape(tokenData.TradingSymbol))
 					}
-					// }
-					data.Tickers = append(data.Tickers, ticker)
+
+					if subject != "" {
+
+						if os.Getenv("NATS_ENABLED") == "1" {
+							if nc.Status() != nats.CONNECTED {
+								continue
+							} else {
+								js.PublishAsync(subject, bytes)
+							}
+						}
+
+						storage.DataMapMutex.Lock()
+						for len(ticker.Depth.Buy) < 5 {
+							dummyBuy := storage.Order{}
+							ticker.Depth.Buy = append(ticker.Depth.Buy, &dummyBuy)
+						}
+
+						for len(ticker.Depth.Sell) < 5 {
+							dummySell := storage.Order{}
+							ticker.Depth.Sell = append(ticker.Depth.Sell, &dummySell)
+						}
+						storage.DataMap[subject] = ticker
+						storage.DataMapMutex.Unlock()
+					}
 
 				}
 			}
-			// bytes, err := proto.Marshal(data)
-			// if err != nil {
-			// 	log.Panicf("%s", err)
-			// }
-			// appendToFile("./binary/index_proto_"+time.Now().Format(dateFormatConcise)+".zstd", bytes)
 
 		}
 	}(ticker)

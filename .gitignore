@@ -6,5 +6,4 @@ nats/data
 read.sh
 clickhouse/data
 clickhouse/storage_config.xml
-grafana/data
 grafana/grafana.ini

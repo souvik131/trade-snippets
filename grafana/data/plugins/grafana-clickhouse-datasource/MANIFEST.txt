@@ -1,0 +1,41 @@
+
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+{
+  "manifestVersion": "2.0.0",
+  "signatureType": "grafana",
+  "signedByOrg": "grafana",
+  "signedByOrgName": "Grafana Labs",
+  "plugin": "grafana-clickhouse-datasource",
+  "version": "4.7.0",
+  "time": 1738349320109,
+  "keyId": "7e4d0c6a708866e7",
+  "files": {
+    "CHANGELOG.md": "abd620992b33710bf4988cd600c5e9247a9a1f557322684013ed979bd637a2ad",
+    "LICENSE": "cdd15e614b50e88443fe574ad56bde5ba697d958a45376431638eea816e3bfc3",
+    "README.md": "01c2a56425fa4fb836dcb30b7575b0ed031be483567704025e160497e5002e24",
+    "dashboards/cluster-analysis.json": "7f83d4d09cc6f045768f5bf47485b864dd6da03094f8607808dec77cb96902e5",
+    "dashboards/data-analysis.json": "71695f08dfad47f3d4da4c2d331a09eb8fe5789520d5566fffeecd626079caa1",
+    "dashboards/opentelemetry-clickhouse.json": "1a710a750988fdcd7d788e8aef001c1fb106e00253ea0208c2963d9a71d717e8",
+    "dashboards/query-analysis.json": "1b2006a3f4142e512e50156a7d2fd8cf03a178019aaccc964c0283c8559298b3",
+    "dashboards/system-dashboards.json": "a47eb47b9cd0bea82a7276fc805bba214164e677f68fb1e821b0278b17bee7f0",
+    "go_plugin_build_manifest": "6b015332ba15f7e08564590699d0862dbce259c82a713e78223b49a81175cb5a",
+    "gpx_clickhouse_linux_arm64": "0d9358337a2e70287fda9b6922b1be8519e54dc12a414c0d1aa7ee1996776fc4",
+    "img/logo.svg": "838199055d86584ff105e5e91013203a6acb7d3f2061ae27678786125ab11f09",
+    "module.js": "442726e75ceff9ce9a337a8e71c7641cde8856d454abdfe3dae4901e50183cab",
+    "module.js.map": "8645fd7db9086dff8a520d750a3c75810f503765985c95aeb02bb97b73a9a6c1",
+    "plugin.json": "b60d161b594753eadacba691bf2a033a36b15d888b833da3e6e5e63b1470ed27"
+  }
+}
+-----BEGIN PGP SIGNATURE-----
+Version: OpenPGP.js v4.10.11
+Comment: https://openpgpjs.org
+
+wrkEARMKAAYFAmedGwgAIQkQfk0ManCIZucWIQTzOyW2kQdOhGNlcPN+TQxq
+cIhm58HIAgkAfz89WhObuW7yTbeKa70pf/zMZGQFRFII4FjBUJK+tao2zUAD
+Sm/6rZqYiwYVzsVr4uo2TPnW+lgh6THTh/2wc6sCCQAWszAkrzypAobz/ADh
+zYz5rKoSwbmHFyHlfHhztzVptBIW8AD6gqOh/UjvGlmVCuiAlr+20JaL9W6z
+o1QW8zTZZA==
+=z4mG
+-----END PGP SIGNATURE-----
