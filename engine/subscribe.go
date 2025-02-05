@@ -328,18 +328,18 @@ func fetchLatestFeeds(js jetstream.JetStream) {
 				g := greeks.RunGreek(underlyingPrice, hrsLeft, strikeFloat, price, instrumentType == "CE")
 				// log.Info(g.Iv, underlyingPrice, hrsLeft, strikeFloat, price, instrumentType == "CE")
 				allGreeks = append(allGreeks, &log.Fields{
-					"exchange":           exchange,
-					"script":             script,
-					"expiry":             expiry,
-					"strike":             strike,
-					"instrument_type":    instrumentType,
-					"delta":              int32(math.Round(g.Delta * 100)),
-					"gamma":              int32(math.Round(g.Gamma * 100)),
-					"theta":              int32(math.Round(g.Theta * 100)),
-					"vega":               int32(math.Round(g.Vega * 100)),
-					"rho":                int32(math.Round(g.Rho * 100)),
-					"implied_volatility": int32(math.Round(g.Iv * 10000)),
-					"timestamp":          time.Unix(int64(ticker.ExchangeTimestamp), 0),
+					"exchange":        exchange,
+					"script":          script,
+					"expiry":          expiry,
+					"strike":          strike,
+					"instrument_type": instrumentType,
+					"delta":           int32(math.Round(g.Delta * 100)),
+					"gamma":           int32(math.Round(g.Gamma * 100)),
+					"theta":           int32(math.Round(g.Theta * 100)),
+					"vega":            int32(math.Round(g.Vega * 100)),
+					"rho":             int32(math.Round(g.Rho * 100)),
+					"iv":              int32(math.Round(g.Iv * 10000)),
+					"timestamp":       time.Unix(int64(ticker.ExchangeTimestamp), 0),
 				})
 				scriptExpiry := fmt.Sprintf("%v.%v", script, expiry)
 				if _, ok := derivedOptionsByScriptExpiry[scriptExpiry]; !ok {
