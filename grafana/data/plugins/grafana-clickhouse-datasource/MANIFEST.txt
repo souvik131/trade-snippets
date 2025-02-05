@@ -9,7 +9,7 @@ Hash: SHA512
   "signedByOrgName": "Grafana Labs",
   "plugin": "grafana-clickhouse-datasource",
   "version": "4.7.0",
-  "time": 1738349320109,
+  "time": 1738349317426,
   "keyId": "7e4d0c6a708866e7",
   "files": {
     "CHANGELOG.md": "abd620992b33710bf4988cd600c5e9247a9a1f557322684013ed979bd637a2ad",
@@ -21,7 +21,7 @@ Hash: SHA512
     "dashboards/query-analysis.json": "1b2006a3f4142e512e50156a7d2fd8cf03a178019aaccc964c0283c8559298b3",
     "dashboards/system-dashboards.json": "a47eb47b9cd0bea82a7276fc805bba214164e677f68fb1e821b0278b17bee7f0",
     "go_plugin_build_manifest": "6b015332ba15f7e08564590699d0862dbce259c82a713e78223b49a81175cb5a",
-    "gpx_clickhouse_linux_arm64": "0d9358337a2e70287fda9b6922b1be8519e54dc12a414c0d1aa7ee1996776fc4",
+    "gpx_clickhouse_linux_amd64": "4e2bcf889b0d852bf0fbaddd13d6eeedaec1292219d23012b901e18e66004232",
     "img/logo.svg": "838199055d86584ff105e5e91013203a6acb7d3f2061ae27678786125ab11f09",
     "module.js": "442726e75ceff9ce9a337a8e71c7641cde8856d454abdfe3dae4901e50183cab",
     "module.js.map": "8645fd7db9086dff8a520d750a3c75810f503765985c95aeb02bb97b73a9a6c1",
@@ -32,10 +32,10 @@ Hash: SHA512
 Version: OpenPGP.js v4.10.11
 Comment: https://openpgpjs.org
 
-wrkEARMKAAYFAmedGwgAIQkQfk0ManCIZucWIQTzOyW2kQdOhGNlcPN+TQxq
-cIhm58HIAgkAfz89WhObuW7yTbeKa70pf/zMZGQFRFII4FjBUJK+tao2zUAD
-Sm/6rZqYiwYVzsVr4uo2TPnW+lgh6THTh/2wc6sCCQAWszAkrzypAobz/ADh
-zYz5rKoSwbmHFyHlfHhztzVptBIW8AD6gqOh/UjvGlmVCuiAlr+20JaL9W6z
-o1QW8zTZZA==
-=z4mG
+wrkEARMKAAYFAmedGwUAIQkQfk0ManCIZucWIQTzOyW2kQdOhGNlcPN+TQxq
+cIhm5+oBAgkA4wPIk6GHcu51VUdmkqHFa0+kM1pdxs57nXlUSznyi4Ye0ksK
+8bb/gxrcx50OxSFGgxrEmwo6LwqVqwc8QVhUE8YCCQFBNhMmtVBZwPTZ3NoB
+yztFpbrh0448J1HY9dzrAWZtiOSoUtIi9RbkLLuskcRrnX4U7JAHcCQyYlgA
+2p4N2fKFqQ==
+=r3lR
 -----END PGP SIGNATURE-----
