@@ -558,7 +558,8 @@ func Upload() error {
 
 		mapFile := fileDir + "/" + f.Name()
 
-		if strings.Contains(f.Name(), "_"+time.Now().Format(dateFormatConcise)) {
+		if strings.Contains(f.Name(), ".zstd") {
+
 			fileInfo, err := os.Stat(mapFile)
 			if err != nil {
 				return fmt.Errorf("failed to get file info %q, %v", mapFile, err)
@@ -584,3 +585,4 @@ func Upload() error {
 
 	return nil
 }
+

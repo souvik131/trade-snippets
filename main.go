@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -22,8 +23,11 @@ func main() {
 	}
 
 	analytics.Init()
-	cronJob.AddFunc("15 19 * * *", func() {
-		engine.Upload()
+	cronJob.AddFunc("45 15 * * *", func() {
+		err := engine.Upload()
+		if err != nil {
+			log.Panicln(err)
+		}
 	})
 	cronJob.Start()
 
@@ -32,3 +36,4 @@ func main() {
 	// engine.Read(time.Now().Format(dateFormatConcise))
 
 }
+
