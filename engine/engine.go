@@ -361,9 +361,9 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 				if float64(processed)/float64(totalTokens) == 1 {
 					processedTokens = 0
 					processedSymbols = make(map[string]bool)
-					storage.DataMapMutex.Lock()
-					storage.DataMap = map[string]*storage.Ticker{}
-					storage.DataMapMutex.Unlock()
+					// storage.DataMapMutex.Lock()
+					// storage.DataMap = map[string]*storage.Ticker{}
+					// storage.DataMapMutex.Unlock()
 				}
 			}
 			symbolsMutex.Unlock()
