@@ -361,6 +361,9 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 				if float64(processed)/float64(totalTokens) == 1 {
 					processedTokens = 0
 					processedSymbols = make(map[string]bool)
+					storage.DataMapMutex.Lock()
+					storage.DataMap = map[string]*storage.Ticker{}
+					storage.DataMapMutex.Unlock()
 				}
 			}
 			symbolsMutex.Unlock()
@@ -501,20 +504,21 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 							} else {
 								js.PublishAsync(subject, bytes)
 							}
-						}
+						} else {
 
-						storage.DataMapMutex.Lock()
-						for len(ticker.Depth.Buy) < 5 {
-							dummyBuy := storage.Order{}
-							ticker.Depth.Buy = append(ticker.Depth.Buy, &dummyBuy)
-						}
+							storage.DataMapMutex.Lock()
+							for len(ticker.Depth.Buy) < 5 {
+								dummyBuy := storage.Order{}
+								ticker.Depth.Buy = append(ticker.Depth.Buy, &dummyBuy)
+							}
 
-						for len(ticker.Depth.Sell) < 5 {
-							dummySell := storage.Order{}
-							ticker.Depth.Sell = append(ticker.Depth.Sell, &dummySell)
+							for len(ticker.Depth.Sell) < 5 {
+								dummySell := storage.Order{}
+								ticker.Depth.Sell = append(ticker.Depth.Sell, &dummySell)
+							}
+							storage.DataMap[subject] = ticker
+							storage.DataMapMutex.Unlock()
 						}
-						storage.DataMap[subject] = ticker
-						storage.DataMapMutex.Unlock()
 					}
 
 				}
