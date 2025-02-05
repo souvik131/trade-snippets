@@ -5,5 +5,3 @@ build
 nats/data
 read.sh
 clickhouse/data
-clickhouse/storage_config.xml
-grafana/grafana.ini
