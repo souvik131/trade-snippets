@@ -97,20 +97,11 @@ func getHoursToExpiry(expiry time.Time) float64 {
 		todayPreMarketHours = preMarketTimestamp.Sub(now).Hours()
 	}
 
-	tradingDurationInHours, err := strconv.ParseFloat(os.Getenv("TRADING_DURATION_IN_HOURS"), 64)
-	if err != nil {
-		log.Panic(err)
-	}
-	tradeEndHour, err := strconv.ParseFloat(os.Getenv("TRADING_END_HOUR"), 64)
-	if err != nil {
-		log.Panic(err)
-	}
-	tradeEndMin, err := strconv.ParseFloat(os.Getenv("TRADING_END_MINUTE"), 64)
-	if err != nil {
-		log.Panic(err)
-	}
+	tradingDurationInHours := 6.25
+	tradeEndHour := 15.0
+	tradeEndMinute := 30.0
 
-	postMarketOffset := 24 - tradeEndHour - tradeEndMin/60
+	postMarketOffset := 24 - tradeEndHour - tradeEndMinute/60
 
 	duration := expiry.AddDate(0, 0, 1).Sub(now).Hours() - postMarketOffset
 

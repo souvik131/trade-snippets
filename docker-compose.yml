@@ -22,19 +22,19 @@ services:
     volumes:
       - ./clickhouse/data:/var/lib/clickhouse
     restart: always
-  fetch:
-    build:
-      context: ./
-    restart: always
-    ports:
-      - "127.0.0.1:8080:8080"
-    volumes:
-      - ./binary:/usr/src/app/binary
-    env_file:
-      - .env
-    depends_on:
-      - nats
-      - clickhouse
+  # fetch:
+  #   build:
+  #     context: ./
+  #   restart: always
+  #   ports:
+  #     - "127.0.0.1:8080:8080"
+  #   volumes:
+  #     - ./binary:/usr/src/app/binary
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     - nats
+  #     - clickhouse
   grafana:
     image: grafana/grafana:10.0.3
     user: "0"
