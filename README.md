@@ -22,13 +22,13 @@ To configure the application, rename `.env_example` to `.env` and set the follow
 
 ### Kite Trading API Configuration
 
-- `TA_KITE_LOGINTYPE`: Authentication method for Kite (set to "WEB" for web-based authentication)
+- `TA_KITE_LOGINTYPE`: Authentication method for Kite (set to "WEB" for default authentication, and "API" for API-based authentication)
 - `TA_KITE_ID`: Your Kite user ID/client ID
 - `TA_KITE_PASSWORD`: Your Kite account password
 - `TA_KITE_TOTP`: Time-based One-Time Password for 2FA authentication
-- `TA_KITE_APIKEY`: API key from your Kite developer account
-- `TA_KITE_APISECRET`: API secret from your Kite developer account
-- `TA_KITE_PATH`: Path for Kite callback URL
+- `TA_KITE_APIKEY`: API key from your Kite developer account ( required if TA_KITE_LOGINTYPE is API )
+- `TA_KITE_APISECRET`: API secret from your Kite developer account ( required if TA_KITE_LOGINTYPE is API )
+- `TA_KITE_PATH`: Path for Kite callback URL ( required if TA_KITE_LOGINTYPE is API )
 
 ### Digital Ocean Storage Configuration
 
