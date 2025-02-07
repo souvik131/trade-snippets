@@ -5,3 +5,5 @@ build
 nats/data
 read.sh
 clickhouse/data
+csv
+py

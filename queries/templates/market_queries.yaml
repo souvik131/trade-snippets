@@ -1,0 +1,76 @@
+# Query templates for market data analysis
+queries:
+  get_cash_data:
+    description: "Get Cash Data"
+    template: |
+      select script,sum(logvolume) as log_volume_diff, sum(logprice) as log_price_diff  , toStartOfFiveMinute(timestamp) as time from
+      (select script,log(price/previous_close) as logprice, log(volume/last_volume) as logvolume, timestamp from
+      (select script,price,lagInFrame(price, 1, price) OVER (PARTITION BY script ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING ) AS previous_close,volume,lagInFrame(volume, 1, volume) OVER (PARTITION BY script ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING ) AS last_volume,timestamp from
+      (select * ,((buy_quantity_1*buy_price_1+sell_quantity_1*sell_price_1)/(buy_quantity_1+sell_quantity_1)) as price from market_live_data_log where  instrument_type='EQ'  and volume>10000 and price>100 and buy_price_1>0 and sell_price_1>0 and buy_quantity_5>0 and sell_quantity_5>0 and buy_quantity_4>0 and sell_quantity_4>0 and buy_quantity_3>0 and sell_quantity_3>0 and buy_quantity_3>0 and sell_quantity_3>0 and buy_quantity_2>0 and sell_quantity_2>0 and buy_quantity_1>0 and sell_quantity_1>0   and timestamp BETWEEN {start_time:DateTime} AND {end_time:DateTime} order by timestamp  ) 
+      ))  where logvolume!=0 and logprice!=0  group by script,time
+  get_rv_iv_data:
+    description: "Get Iv Rv Data"
+    template: |
+      select script,iv,rv,time  from
+      (select script, last_value(atm_iv/100) as iv,toStartOfFiveMinute(timestamp) as time from (
+        select * from market_derived_options_log  where  expiry={expiry:String} and underlying_price>0 and atm_iv>0 and atm_iv<40000 AND timestamp BETWEEN {start_time:DateTime} AND {end_time:DateTime} order by timestamp
+      )  group by script,time) 
+      as iv_table
+      join
+      (
+      select script,last_value(rv_val) as rv, toStartOfFiveMinute(timestamp) as time from
+      (
+      select 
+          script,
+          expiry,
+          timestamp,
+          150000*sqrt(temp1/ sum_weights)- pow(temp2/ sum_weights, 2)*sqrt(375*250/mins) AS rv_val
+      from
+      (
+          SELECT 
+              script,
+              expiry,
+              timestamp,
+              returns,
+              count(timestamp) OVER (PARTITION BY script,expiry ORDER BY timestamp) AS mins,
+              SUM(returns_squared_weighted) OVER (PARTITION BY script,expiry ORDER BY timestamp DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as temp1,
+              SUM(returns_weighted) OVER (PARTITION BY script,expiry ORDER BY timestamp DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as temp2,
+              sum_weights
+          FROM (
+
+              SELECT 
+                  script,
+                  expiry,
+                  timestamp,
+                  returns,
+                  weight,
+                  returns_weighted,
+                  returns_squared_weighted,
+                  SUM(weight) OVER (PARTITION BY script,expiry ORDER BY timestamp DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS sum_weights
+              FROM (
+                  SELECT 
+                      script,
+                      expiry,
+                      timestamp,
+                      returns,
+                      exp(0.05 * rn) AS weight,
+                      returns * exp(0.05 * rn) AS returns_weighted,
+                      pow(returns, 2) * exp(0.05 * rn) AS returns_squared_weighted
+                  FROM (
+                      SELECT 
+                          script,
+                          expiry,
+                          timestamp,
+                          returns,
+                          row_number() OVER (PARTITION BY script,expiry ORDER BY timestamp DESC) AS rn
+                      FROM 
+                      (
+                                  select  script,expiry, (underlying_price/previous_close-1) as returns, timestamp from 
+                                  (select *,lagInFrame(underlying_price, 1, underlying_price) OVER (PARTITION BY script,expiry ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING ) AS previous_close  from market_derived_options_log where  expiry={expiry:String} and  underlying_price>0 and atm_iv>0 and atm_iv<40000  AND timestamp BETWEEN {start_time:DateTime} AND {end_time:DateTime} order by timestamp )
+                      )
+                  ) AS t1
+              ) AS t2
+          ) AS t3 
+      ) AS t4 where mins>20 and rv_val!=0
+      ) group by script,time 
+      ) as rv_table on rv_table.script=iv_table.script   and  rv_table.time=iv_table.time

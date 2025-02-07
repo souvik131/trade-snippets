@@ -122,6 +122,13 @@ var (
 	mu sync.Mutex
 )
 
+// GetConnection returns the ClickHouse connection for use by other packages
+func GetConnection() driver.Conn {
+	mu.Lock()
+	defer mu.Unlock()
+	return conn
+}
+
 func Init() {
 	dbURI := os.Getenv("DB_URI")
 	if dbURI == "" {
@@ -248,9 +255,7 @@ func (l LogType) BatchStore(fields []*log.Fields) {
 			for _, key := range keyArr {
 				if val, ok := (*f)[key]; ok {
 					if _, ok := schemas[l][key]; ok {
-
 						values = append(values, val)
-
 					}
 				} else {
 					// Handle missing field with default value
