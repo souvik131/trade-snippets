@@ -3,11 +3,11 @@ package ws
 import (
 	"context"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
 	"nhooyr.io/websocket"
 )
 
@@ -44,7 +44,7 @@ const PONG MessageType = 10
 func (c *Client) Connect(ctx *context.Context) ([]byte, error) {
 
 	conn, response, err := websocket.Dial(*ctx, c.URL.String(), &websocket.DialOptions{HTTPHeader: *c.Header})
-	// log.Println(c.URL.String(), response.Status)
+	conn.SetReadLimit(4e6)
 	c.ConnMutex.Lock()
 	c.Conn = conn
 	c.ConnMutex.Unlock()
@@ -85,7 +85,7 @@ func (c *Client) Read(ctx *context.Context) error {
 				}
 				err := c.Close(ctx)
 				if err != nil {
-					log.Printf("websocket : failed closing connection -> %v", err)
+					log.Warnf("websocket : failed closing connection -> %v", err)
 				}
 				return
 			}
@@ -96,7 +96,7 @@ func (c *Client) Read(ctx *context.Context) error {
 			}
 			if err != nil {
 
-				log.Printf("websocket : reconnecting as error in connection during read -> %v", err)
+				log.Warnf("websocket : reconnecting as error in connection during read -> %v", err)
 				return
 			}
 
@@ -112,12 +112,12 @@ func (c *Client) Write(ctx *context.Context, writer *Writer) error {
 	if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
 		err := c.Close(ctx)
 		if err != nil {
-			log.Printf("websocket : failed closing connection -> %v", err)
+			log.Warnf("websocket : failed closing connection -> %v", err)
 		}
 		return nil
 	}
 	if err != nil {
-		log.Printf("websocket : reconnecting as error in connection during write -> %v", err)
+		log.Warnf("websocket : reconnecting as error in connection during write -> %v", err)
 	}
 	return err
 }

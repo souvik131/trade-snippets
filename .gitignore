@@ -1,2 +1,9 @@
-data*.bin
+*.zstd
 .env
+.DS_Store
+build
+nats/data
+read.sh
+clickhouse/data
+csv
+py

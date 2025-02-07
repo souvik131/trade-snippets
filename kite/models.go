@@ -43,6 +43,7 @@ type TickerClient struct {
 	QuoteTokens                map[uint32]bool
 	LtpTokens                  map[uint32]bool
 	HeartBeatIntervalInSeconds float64
+	ReceiveBinaryTickers       bool
 }
 type LimitOrder struct {
 	Price    float64

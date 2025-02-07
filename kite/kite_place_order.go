@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"reflect"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/souvik131/trade-snippets/requests"
 )
 
@@ -67,7 +67,7 @@ func (kite *Kite) PlaceOrder(ctx *context.Context, order *Order) (string, error)
 		return "", errors.New("order_type_not_allowed")
 	}
 
-	log.Printf("Placing the following order : %+v", kOrder)
+	log.Infof("Placing the following order : %+v", kOrder)
 
 	url := k["Url"] + "/orders/" + kOrder.Variety
 	queries := make([]string, 0)
@@ -96,7 +96,7 @@ func (kite *Kite) PlaceOrder(ctx *context.Context, order *Order) (string, error)
 		return "", err
 	}
 	if code == 200 && kiteResponse.Data != nil && kiteResponse.Data.OrderId != "" {
-		log.Println("Order Id:", kiteResponse.Data.OrderId)
+		log.Info("Order Id:", kiteResponse.Data.OrderId)
 		return kiteResponse.Data.OrderId, nil
 	}
 	return "", errors.New(kiteResponse.Message)
@@ -156,7 +156,7 @@ func (kite *Kite) ModifyOrder(ctx *context.Context, orderId string, order *Order
 		return errors.New("order_type_not_allowed")
 	}
 
-	log.Printf("Placing the following order : %+v", kOrder)
+	log.Infof("Placing the following order : %+v", kOrder)
 
 	url := k["Url"] + "/orders/" + kOrder.Variety + "/" + orderId
 	queries := make([]string, 0)

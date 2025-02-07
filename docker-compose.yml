@@ -1,10 +1,49 @@
 version: "3"
 services:
+  nats:
+    image: nats:2.10.18
+    ports:
+      - 127.0.0.1:4222:4222
+      - 127.0.0.1:8222:8222
+      - 127.0.0.1:8090:8090
+    volumes:
+      - ./nats/data:/data
+      - ./nats/config:/etc/nats
+    command:
+      - "--js"
+      - "-c"
+      - "/etc/nats/nats.conf"
+    restart: always
+  clickhouse:
+    image: yandex/clickhouse-server
+    ports:
+      - "127.0.0.1:8123:8123"
+      - "127.0.0.1:9000:9000"
+    volumes:
+      - ./clickhouse/data:/var/lib/clickhouse
+    restart: always
   fetch:
     build:
       context: ./
     restart: always
+    ports:
+      - "127.0.0.1:8080:8080"
     volumes:
       - ./binary:/usr/src/app/binary
     env_file:
       - .env
+    depends_on:
+      - nats
+      - clickhouse
+  grafana:
+    image: grafana/grafana:10.0.3
+    user: "0"
+    volumes:
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ./grafana/data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    restart: always
+    depends_on:
+      - nats
+      - clickhouse

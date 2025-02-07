@@ -1,26 +1,43 @@
 package main
 
 import (
-	"context"
 	"log"
-	"sync"
+	"os"
 
-	"github.com/souvik131/trade-snippets/kite"
+	"github.com/joho/godotenv"
+	"github.com/robfig/cron/v3"
+	"github.com/souvik131/trade-snippets/analytics"
+	"github.com/souvik131/trade-snippets/engine"
+	"github.com/souvik131/trade-snippets/queries"
+)
+
+var (
+	cronJob = cron.New()
 )
 
 func main() {
+	if os.Getenv("TA_KITE_ID") == "" {
+		godotenv.Load()
 
-	var k = &kite.Kite{}
-	ctx := context.Background()
-	err := k.Login(&ctx)
-	if err != nil {
-		log.Panicf("%s", err)
-		return
+		os.Setenv("TA_NATS_URI", "nats://127.0.0.1:4222")
+		os.Setenv("DB_URI", "127.0.0.1:9000")
 	}
 
-	Serve(&ctx, k)
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	wg.Wait()
+	analytics.Init()
+	cronJob.AddFunc("45 15 * * *", func() {
+		err := engine.Upload()
+		if err != nil {
+			log.Panicln(err)
+		}
+	})
+	cronJob.Start()
 
+	engine.Subscribe()
+	engine.Write()
+	// engine.Read(time.Now().Format(dateFormatConcise))
+
+	// Start query server on port 8080
+	if err := queries.StartServer(8080); err != nil {
+		log.Panicf("Failed to start query server: %v", err)
+	}
 }

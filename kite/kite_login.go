@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"log"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pquerna/otp/hotp"
@@ -44,12 +44,10 @@ func (kite *Kite) oauth(c *gin.Context) {
 	payload := fmt.Sprintf("api_key=%v&request_token=%v&checksum=%v", k["ApiKey"], k["RequestToken"], GetSha256(k["ApiKey"]+k["RequestToken"]+k["ApiSecret"]))
 	body, code, _, err := requests.PostWithCookies(&ctx, "https://api.kite.trade/session/token", payload, headers, "")
 	if err != nil {
-		log.Println(err)
 		c.Data(http.StatusFailedDependency, "text/plain; charset=utf-8", []byte("failed"))
 		return
 	}
 	if code != 200 {
-		log.Printf("failed %v", code)
 		c.Data(http.StatusFailedDependency, "text/plain; charset=utf-8", []byte("failed"))
 		return
 	}
@@ -64,7 +62,7 @@ func (kite *Kite) oauth(c *gin.Context) {
 	var respLogin LoginCompletePayload
 	err = json.Unmarshal(body, &respLogin)
 	if err != nil {
-		log.Println(err)
+		log.Warn(err)
 		c.Data(http.StatusFailedDependency, "text/plain; charset=utf-8", []byte("failed"))
 		return
 	}
@@ -74,23 +72,24 @@ func (kite *Kite) oauth(c *gin.Context) {
 	}
 	k["AccessToken"] = respLogin.Data.AccessToken
 	k["Token"] = fmt.Sprintf("token %v:%v", k["ApiKey"], respLogin.Data.AccessToken)
+
 	// log.Println("Stage 7: OAuth Complete ", k["Token"])
 	c.Data(http.StatusOK, "text/plain; charset=utf-8", []byte("ok"))
 
 }
 
-func (kite *Kite) GetWebSocketClient(ctx *context.Context) (*TickerClient, error) {
+func (kite *Kite) GetWebSocketClient(ctx *context.Context /*, receiveBinaryTickers bool*/) (*TickerClient, error) {
 	k := *(*kite).Creds
 
-	loginType := strings.TrimSpace(os.Getenv("TA_LOGINTYPE"))
+	loginType := strings.TrimSpace(os.Getenv("TA_KITE_LOGINTYPE"))
 	if loginType == "" {
-		log.Fatalln("Please ensure .env file has all the creds including TA_LOGINTYPE")
+		log.Fatalln("Please ensure .env file has all the creds including TA_KITE_LOGINTYPE")
 	}
 
 	k["LoginType"] = loginType
 
 	if k["LoginType"] == "WEB" {
-		kws, err := GetWebsocketClientForWeb(ctx, k["Id"], k["Token"])
+		kws, err := GetWebsocketClientForWeb(ctx, k["Id"], k["Token"] /*, receiveBinaryTickers*/)
 		if err != nil {
 			return nil, err
 		}
@@ -98,19 +97,19 @@ func (kite *Kite) GetWebSocketClient(ctx *context.Context) (*TickerClient, error
 		go func() {
 
 			for err := range kws.ErrorChan {
-				log.Printf("websocket client error : %v", err)
+				log.Panicf("websocket client error : %v", err)
 			}
 		}()
 		return kws, nil
 	} else if k["LoginType"] == "API" {
-		kws, err := GetWebsocketClientForAPI(ctx, k["Token"])
+		kws, err := GetWebsocketClientForAPI(ctx, k["Token"] /*, receiveBinaryTickers*/)
 		if err != nil {
 			return nil, err
 		}
 		go func() {
 
 			for err := range kws.ErrorChan {
-				log.Printf("websocket client error : %v", err)
+				log.Infof("websocket client error : %v", err)
 			}
 		}()
 		return kws, nil
@@ -123,7 +122,7 @@ func (kite *Kite) Login(ctx *context.Context) error {
 	(*kite).Creds = &Creds{}
 	k := *(*kite).Creds
 
-	loginType := strings.TrimSpace(os.Getenv("TA_LOGINTYPE"))
+	loginType := strings.TrimSpace(os.Getenv("TA_KITE_LOGINTYPE"))
 	if loginType == "" {
 		log.Fatalln("Please ensure .env  file has all the creds including TA_LOGINTYPE")
 	}
@@ -159,7 +158,7 @@ func (kite *Kite) Login(ctx *context.Context) error {
 func (kite *Kite) LoginWeb(ctx *context.Context) error {
 	k := *(*kite).Creds
 	for _, input := range webInputs {
-		val := strings.TrimSpace(os.Getenv("TA_" + strings.ToUpper(input)))
+		val := strings.TrimSpace(os.Getenv("TA_KITE_" + strings.ToUpper(input)))
 		if val == "" {
 			log.Fatalln("Please ensure .env  file has all the creds including ", "TA_"+strings.ToUpper(input))
 		}
@@ -254,7 +253,7 @@ func (kite *Kite) LoginWeb(ctx *context.Context) error {
 func (kite *Kite) LoginApi(ctx *context.Context) error {
 	k := *(*kite).Creds
 	for _, input := range apiInputs {
-		val := strings.TrimSpace(os.Getenv("TA_" + strings.ToUpper(input)))
+		val := strings.TrimSpace(os.Getenv("TA_KITE_" + strings.ToUpper(input)))
 		if val == "" {
 			log.Fatalln("Please ensure .env  file has all the creds including ", "TA_"+strings.ToUpper(input))
 		}
@@ -267,7 +266,7 @@ func (kite *Kite) LoginApi(ctx *context.Context) error {
 	if k["Port"] != "80" {
 		portString = ":" + k["Port"]
 	}
-	log.Println("Ensure that the URL set in kite.trade is http://127.0.0.1" + portString + k["Path"])
+	log.Warn("Ensure that the URL set in kite.trade is http://127.0.0.1" + portString + k["Path"])
 	router.Use(gin.Recovery())
 	go func() {
 		router.Run("0.0.0.0:" + k["Port"])
