@@ -36,7 +36,7 @@ services:
       - nats
       - clickhouse
   grafana:
-    image: grafana/grafana:10.0.3
+    image: grafana/grafana:11.5.1
     user: "0"
     volumes:
       - ./grafana/grafana.ini:/etc/grafana/grafana.ini

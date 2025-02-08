@@ -1,0 +1,84 @@
+{
+    "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
+    "type": "app",
+    "name": "Explore Profiles",
+    "id": "grafana-pyroscope-app",
+    "autoEnabled": true,
+    "backend": false,
+    "preload": true,
+    "dependencies": {
+        "grafanaDependency": ">=11.3.2",
+        "plugins": []
+    },
+    "info": {
+        "keywords": [
+            "app",
+            "pyroscope",
+            "profiling",
+            "explore",
+            "profiles",
+            "performance"
+        ],
+        "description": "Continuous profiling service powered by Grafana Pyroscope",
+        "author": {
+            "name": "Grafana"
+        },
+        "logos": {
+            "small": "img/logo.svg",
+            "large": "img/logo.svg"
+        },
+        "screenshots": [
+            {
+                "name": "Hero Image",
+                "path": "img/hero-image.png"
+            }
+        ],
+        "version": "0.1.19",
+        "updated": "2025-01-29",
+        "links": [
+            {
+                "name": "GitHub",
+                "url": "https://github.com/grafana/explore-profiles"
+            },
+            {
+                "name": "Report bug",
+                "url": "https://github.com/grafana/explore-profiles/issues/new"
+            }
+        ]
+    },
+    "includes": [
+        {
+            "type": "page",
+            "name": "Explore profiles",
+            "path": "/a/grafana-pyroscope-app/profiles-explorer",
+            "role": "Viewer",
+            "addToNav": true,
+            "defaultNav": false
+        },
+        {
+            "type": "page",
+            "name": "Ad hoc view",
+            "path": "/a/grafana-pyroscope-app/ad-hoc",
+            "role": "Viewer",
+            "addToNav": true,
+            "defaultNav": false
+        }
+    ],
+    "extensions": {
+        "extensionPoints": [
+            {
+                "id": "grafana-pyroscope-app/exploration/v1"
+            }
+        ],
+        "addedLinks": [
+            {
+                "title": "Open in Explore Profiles",
+                "description": "Try our new queryless experience for profiles",
+                "targets": [
+                    "grafana/explore/toolbar/action"
+                ]
+            }
+        ]
+    },
+    "buildMode": "production"
+}
