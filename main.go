@@ -33,7 +33,7 @@ func main() {
 	cronJob.Start()
 
 	engine.Subscribe()
-	engine.Write()
+	go engine.Write()
 	// engine.Read(time.Now().Format(dateFormatConcise))
 
 	// Start query server on port 8080
