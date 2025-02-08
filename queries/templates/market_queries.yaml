@@ -24,38 +24,38 @@ queries:
           script,
           expiry,
           timestamp,
-          150000*sqrt(temp1/ sum_weights)- pow(temp2/ sum_weights, 2)*sqrt(375*250/mins) AS rv_val
+          100*sqrt((temp1 / sum_weights) - pow(temp2 / sum_weights, 2)) * sqrt(252 * 6.5 *60/(POWER(mins/mins+700, 1.1))) AS rv_val
       from
       (
           SELECT 
-              script,
-              expiry,
-              timestamp,
-              returns,
-              count(timestamp) OVER (PARTITION BY script,expiry ORDER BY timestamp) AS mins,
-              SUM(returns_squared_weighted) OVER (PARTITION BY script,expiry ORDER BY timestamp DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as temp1,
-              SUM(returns_weighted) OVER (PARTITION BY script,expiry ORDER BY timestamp DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as temp2,
-              sum_weights
+                script,
+                expiry,
+                timestamp,
+                returns,
+                count(timestamp) OVER (PARTITION BY script,expiry ORDER BY timestamp) AS mins,
+                SUM(returns_squared_weighted) OVER (PARTITION BY script,expiry ORDER BY timestamp DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as temp1,
+                SUM(returns_weighted) OVER (PARTITION BY script,expiry ORDER BY timestamp DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as temp2,
+                sum_weights
           FROM (
 
               SELECT 
-                  script,
-                  expiry,
-                  timestamp,
-                  returns,
-                  weight,
-                  returns_weighted,
-                  returns_squared_weighted,
-                  SUM(weight) OVER (PARTITION BY script,expiry ORDER BY timestamp DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS sum_weights
+                    script,
+                    expiry,
+                    timestamp,
+                    returns,
+                    weight,
+                    returns_weighted,
+                    returns_squared_weighted,
+                    SUM(weight) OVER (PARTITION BY script,expiry ORDER BY timestamp DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS sum_weights
               FROM (
                   SELECT 
-                      script,
-                      expiry,
-                      timestamp,
-                      returns,
-                      exp(0.05 * rn) AS weight,
-                      returns * exp(0.05 * rn) AS returns_weighted,
-                      pow(returns, 2) * exp(0.05 * rn) AS returns_squared_weighted
+                        script,
+                        expiry,
+                        timestamp,
+                        returns,
+                        exp(0.1 * rn) AS weight,
+                        returns * exp(0.1 * rn) AS returns_weighted,
+                        pow(returns, 2) * exp(0.1 * rn) AS returns_squared_weighted
                   FROM (
                       SELECT 
                           script,
@@ -65,8 +65,8 @@ queries:
                           row_number() OVER (PARTITION BY script,expiry ORDER BY timestamp DESC) AS rn
                       FROM 
                       (
-                                  select  script,expiry, (underlying_price/previous_close-1) as returns, timestamp from 
-                                  (select *,lagInFrame(underlying_price, 1, underlying_price) OVER (PARTITION BY script,expiry ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING ) AS previous_close  from market_derived_options_log where  expiry={expiry:String} and  underlying_price>0 and atm_iv>0 and atm_iv<40000  AND timestamp BETWEEN {start_time:DateTime} AND {end_time:DateTime} order by timestamp )
+                                select  script,expiry, 100*log(underlying_price/previous_close) as returns, timestamp from 
+                                (select *,lagInFrame(underlying_price, 1, underlying_price) OVER (PARTITION BY script,expiry ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING ) AS previous_close  from market_derived_options_log where  expiry={expiry:String} and  underlying_price>0 and atm_iv>0 and atm_iv<40000  AND timestamp BETWEEN {start_time:DateTime} AND {end_time:DateTime} order by timestamp )
                       )
                   ) AS t1
               ) AS t2
