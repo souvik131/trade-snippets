@@ -9,6 +9,7 @@ import (
 	"math"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -29,8 +30,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var rotationInterval = 2.0
-var instrumentsPerRequest = 3000.0
 var dateFormatConcise = "20060102"
 var t = &notifications.Telegram{}
 
@@ -298,6 +297,15 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 	}
 	k.TickerClients = append(k.TickerClients, ticker)
 	k.TickSymbolMap = map[string]kite.KiteTicker{}
+
+	rotationInterval, err := strconv.ParseFloat(os.Getenv("TA_FEED_TIMEOUT"), 64)
+	if err != nil {
+		log.Panicf("%v", err)
+	}
+	instrumentsPerRequest, err := strconv.ParseFloat(os.Getenv("TA_FEED_INSTRUMENT_COUNT"), 64)
+	if err != nil {
+		log.Panicf("%v", err)
+	}
 
 	// Handle websocket connection
 	go func(t *kite.TickerClient) {
@@ -585,4 +593,3 @@ func Upload() error {
 
 	return nil
 }
-
