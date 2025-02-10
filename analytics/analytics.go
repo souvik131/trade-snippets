@@ -130,14 +130,14 @@ func GetConnection() driver.Conn {
 }
 
 func Init() {
-	dbURI := os.Getenv("DB_URI")
+	dbURI := os.Getenv("TA_DB_URI")
 	if dbURI == "" {
-		log.Panic("DB_URI environment variable is not set")
+		log.Panic("TA_DB_URI environment variable is not set")
 	}
 
-	dbName := os.Getenv("DB_NAME")
+	dbName := os.Getenv("TA_DB_NAME")
 	if dbName == "" {
-		log.Panic("DB_NAME environment variable is not set")
+		log.Panic("TA_DB_NAME environment variable is not set")
 	}
 
 	var (

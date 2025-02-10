@@ -157,8 +157,8 @@ func getHolidaysCount(expiry time.Time) float64 {
 	}
 	holidaysCount := 0
 	dateLayout := "02-Jan-2006"
-	if strings.TrimSpace(os.Getenv("HOLIDAYS")) != "" {
-		holidays := strings.Split(strings.TrimSpace(os.Getenv("HOLIDAYS")), ",")
+	if strings.TrimSpace(os.Getenv("TA_HOLIDAYS")) != "" {
+		holidays := strings.Split(strings.TrimSpace(os.Getenv("TA_HOLIDAYS")), ",")
 
 		for i := range holidays {
 			holiday, err := time.ParseInLocation(dateLayout, holidays[i], loc)

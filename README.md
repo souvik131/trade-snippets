@@ -46,9 +46,11 @@ To configure the application, rename `.env_example` to `.env` and set the follow
 ### System Configuration
 
 - `TZ`: Timezone setting (default: Asia/Kolkata)
-- `DB_NAME`: Database name (default: default)
+- `TA_DB_NAME`: Database name (default: default)
 - `TA_NATS_URI`: NATS message broker URI (default: nats://nats:4222)
-- `DB_URI`: ClickHouse database URI (default: clickhouse:9000)
+- `TA_DB_URI`: ClickHouse database URI (default: clickhouse:9000)
+- `TA_FEED_TIMEOUT`: Feed timeout in seconds (default: 2)
+- `TA_FEED_INSTRUMENT_COUNT`: Maximum number of instruments to track (default: 3000)
 
 ```env
 TA_KITE_LOGINTYPE=WEB
@@ -65,10 +67,12 @@ TA_DO_ENDPOINT=
 TA_DO_REGION=
 TA_TELEGRAM_TOKEN=
 TA_TELEGRAM_ID=
-TZ=Asia/Kolkata
-DB_NAME=default
+TA_DB_NAME=default
 TA_NATS_URI=nats://nats:4222
-DB_URI=clickhouse:9000
+TA_DB_URI=clickhouse:9000
+TA_FEED_TIMEOUT=2
+TA_FEED_INSTRUMENT_COUNT=2000
+TZ=Asia/Kolkata
 ```
 
 ## Running the Application
