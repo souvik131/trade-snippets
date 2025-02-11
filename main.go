@@ -8,7 +8,6 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/souvik131/trade-snippets/analytics"
 	"github.com/souvik131/trade-snippets/engine"
-	"github.com/souvik131/trade-snippets/queries"
 )
 
 var (
@@ -33,11 +32,11 @@ func main() {
 	cronJob.Start()
 
 	engine.Subscribe()
-	go engine.Write()
+	engine.Write()
 	// engine.Read(time.Now().Format(dateFormatConcise))
 
-	// Start query server on port 8080
-	if err := queries.StartServer(8080); err != nil {
-		log.Panicf("Failed to start query server: %v", err)
-	}
+	// // Start query server on port 8080
+	// if err := queries.StartServer(8080); err != nil {
+	// 	log.Panicf("Failed to start query server: %v", err)
+	// }
 }
