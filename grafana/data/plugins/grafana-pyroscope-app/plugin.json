@@ -7,7 +7,7 @@
     "backend": false,
     "preload": true,
     "dependencies": {
-        "grafanaDependency": ">=11.3.2",
+        "grafanaDependency": ">=11.5.0",
         "plugins": []
     },
     "info": {
@@ -33,8 +33,8 @@
                 "path": "img/hero-image.png"
             }
         ],
-        "version": "0.1.19",
-        "updated": "2025-01-29",
+        "version": "0.1.20",
+        "updated": "2025-02-10",
         "links": [
             {
                 "name": "GitHub",
@@ -49,19 +49,11 @@
     "includes": [
         {
             "type": "page",
-            "name": "Explore profiles",
-            "path": "/a/grafana-pyroscope-app/profiles-explorer",
-            "role": "Viewer",
+            "name": "Profiles",
+            "path": "/a/grafana-pyroscope-app/explore",
+            "action": "datasources:explore",
             "addToNav": true,
-            "defaultNav": false
-        },
-        {
-            "type": "page",
-            "name": "Ad hoc view",
-            "path": "/a/grafana-pyroscope-app/ad-hoc",
-            "role": "Viewer",
-            "addToNav": true,
-            "defaultNav": false
+            "defaultNav": true
         }
     ],
     "extensions": {
