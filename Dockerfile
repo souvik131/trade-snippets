@@ -1,4 +1,4 @@
-FROM golang:1.20-alpine3.17 AS build
+FROM golang:1.23-alpine3.21 AS build
 
 RUN apk add build-base
 WORKDIR /usr/src/app
@@ -16,4 +16,5 @@ RUN apk add --no-cache tzdata
 ENV TZ=Asia/Kolkata
 WORKDIR /
 COPY --from=0 /usr/local/bin/app .
+COPY --from=build /usr/src/app/.env .env
 CMD ["/app"]
