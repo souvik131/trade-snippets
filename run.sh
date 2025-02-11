@@ -25,7 +25,7 @@ git push origin do;
 
 sudo snap install docker
 snap restart docker
-sudo compose up -d --force-recreate --build
+sudo docker compose up -d --force-recreate --build
 sudo docker system prune -af
 sudo docker volume prune -f
 sudo docker image prune -f
