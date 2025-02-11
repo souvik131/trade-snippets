@@ -1,11 +1,19 @@
-FROM golang:1.23
+FROM golang:1.20-alpine3.17 AS build
 
+RUN apk add build-base
 WORKDIR /usr/src/app
 
+# pre-copy/cache go.mod for pre-downloading dependencies and only redownloading them in subsequent builds if they change
 COPY go.mod ./
 RUN go mod download && go mod verify
 
 COPY . .
-RUN go build -o /usr/local/bin/app
+RUN CGO_ENABLED=1 go build -o /usr/local/bin/app
 
-CMD ["app"]
+
+FROM alpine:3.17
+RUN apk add --no-cache tzdata
+ENV TZ=Asia/Kolkata
+WORKDIR /
+COPY --from=0 /usr/local/bin/app .
+CMD ["/app"]
