@@ -309,6 +309,7 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 
 	// Handle websocket connection
 	go func(t *kite.TickerClient) {
+		isSubscribed := true
 		for range t.ConnectChan {
 			log.Info("Websocket is connected")
 
@@ -325,6 +326,8 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 							case <-(*ctx).Done():
 								return
 							default:
+								nowTimeValue := time.Now().Hour()*60 + time.Now().Minute()
+								withinTradingTime := 9*60+15 <= nowTimeValue && nowTimeValue <= 15*60+30
 								end := start + int(instrumentsPerRequest)
 								if end > len(allTokens) {
 									end = len(allTokens)
@@ -334,12 +337,17 @@ func Serve(ctx *context.Context, k *kite.Kite) {
 								prevStart := start - int(instrumentsPerRequest)
 								if prevStart >= 0 {
 									prevEnd := start
-									t.Unsubscribe(ctx, allTokens[prevStart:prevEnd])
+									if withinTradingTime || isSubscribed {
+										t.Unsubscribe(ctx, allTokens[prevStart:prevEnd])
+									}
+									isSubscribed = false
 								}
 
-								// Subscribe to new chunk
-								t.SubscribeFull(ctx, allTokens[start:end])
-
+								if withinTradingTime {
+									// Subscribe to new chunk
+									t.SubscribeFull(ctx, allTokens[start:end])
+									isSubscribed = true
+								}
 								// Sleep for rotation interval
 								<-time.After(time.Duration(rotationInterval) * time.Second)
 							}

@@ -37,6 +37,7 @@ To configure the application, rename `.env_example` to `.env` and set the follow
 - `TA_DO_BUCKET`: Digital Ocean Spaces bucket name
 - `TA_DO_ENDPOINT`: Digital Ocean Spaces endpoint URL
 - `TA_DO_REGION`: Digital Ocean Spaces region
+- `TA_DO_UPLOAD_CRON_TIME`: Schedule for data uploads (default: "45 15 \* \* \*")
 
 ### Notification Configuration
 
@@ -65,6 +66,7 @@ TA_DO_SECRET=
 TA_DO_BUCKET=
 TA_DO_ENDPOINT=
 TA_DO_REGION=
+TA_DO_UPLOAD_CRON_TIME="45 15 * * *"
 TA_TELEGRAM_TOKEN=
 TA_TELEGRAM_ID=
 TA_DB_NAME=default

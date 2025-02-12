@@ -18,12 +18,18 @@ func main() {
 	if os.Getenv("TA_KITE_ID") == "" {
 		godotenv.Load()
 
-		os.Setenv("TA_NATS_URI", "nats://127.0.0.1:4222")
-		os.Setenv("DB_URI", "127.0.0.1:9000")
+		os.Setenv("TA_NATS_URI", "nats://127.0.0.1:4223")
+		os.Setenv("TA_DB_URI", "127.0.0.1:9001")
 	}
 
 	analytics.Init()
 	cronJob.AddFunc("45 15 * * *", func() {
+		err := engine.Upload()
+		if err != nil {
+			log.Panicln(err)
+		}
+	})
+	cronJob.AddFunc("30 17 * * *", func() {
 		err := engine.Upload()
 		if err != nil {
 			log.Panicln(err)
