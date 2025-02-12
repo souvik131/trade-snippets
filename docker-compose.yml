@@ -29,7 +29,7 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
-      - ./binary:/usr/src/app/binary
+      - ./binary:/app/binary
     env_file:
       - .env
     depends_on:
