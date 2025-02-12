@@ -23,18 +23,13 @@ func main() {
 	}
 
 	analytics.Init()
-	cronJob.AddFunc("45 15 * * *", func() {
+	cronJob.AddFunc(os.Getenv("TA_DO_UPLOAD_CRON_SCHEDULE"), func() {
 		err := engine.Upload()
 		if err != nil {
 			log.Panicln(err)
 		}
 	})
-	cronJob.AddFunc("30 17 * * *", func() {
-		err := engine.Upload()
-		if err != nil {
-			log.Panicln(err)
-		}
-	})
+
 	cronJob.Start()
 
 	engine.Subscribe()
