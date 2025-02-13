@@ -8,17 +8,17 @@ Hash: SHA512
   "signedByOrg": "grafana",
   "signedByOrgName": "Grafana Labs",
   "plugin": "grafana-pyroscope-app",
-  "version": "0.1.20",
-  "time": 1739201531820,
+  "version": "0.1.21",
+  "time": 1739364073274,
   "keyId": "7e4d0c6a708866e7",
   "files": {
     "608.js.map": "548edbe49239552c779caeee36a3c1676998fa830ef6f6bad39ca0a586f766c0",
-    "module.js": "c8b332cbbf39ccb9116aaf1f829c0aec664d49b868cd2d21b1e1f22fa5b5326e",
+    "module.js": "a83cd90f2ca65910f0f8438f4c30c687015459334dbde1cc259aa1739e4ee4bb",
     "module.js.LICENSE.txt": "0960d362c3bc2aea3e541a27e82360d2e7c208834be767ecfbd61735fa9cf758",
     "373.js": "54f3e0c7218d57d17b58d7fa262a5618dbfb6937ab3d1197700c9af73d38e73b",
     "LICENSE": "8486a10c4393cee1c25392769ddd3b2d6c242d6ec7928e1414efff7dfb2f07ef",
     "e79edcfbe2068fae2364.svg": "89ea40b6dcf2dc8dfe146f8acac42b604e4d3c3dad03e539551d58a21f80654d",
-    "plugin.json": "29bdf4750b515ce0525e562f0b0bf4ee576ccd6b72fca3826f6327ec3fea8e66",
+    "plugin.json": "aea20221367c73fdcad9f3faaa6955d5f2c9934c5269b7bfdcefa12f8cc8a773",
     "pages/ProfilesExplorerView/components/SceneByVariableRepeaterGrid/components/SceneEmptyState/ui/img/grot-404-dark.svg": "a0c8acbcf5685a8950ce1c67722579dc745585fb0d668ce965327955e5e829ff",
     "pages/ProfilesExplorerView/components/SceneByVariableRepeaterGrid/components/SceneEmptyState/ui/img/grot-404-light.svg": "89ea40b6dcf2dc8dfe146f8acac42b604e4d3c3dad03e539551d58a21f80654d",
     "e6c722427cfa8715e19d.svg": "559341996765c2d5639a2818d76bcd88ffe252212193a573f2f9f77dae5064dd",
@@ -35,7 +35,7 @@ Hash: SHA512
     "img/logo.svg": "559341996765c2d5639a2818d76bcd88ffe252212193a573f2f9f77dae5064dd",
     "img/3e820d7b934ac6c337fc.png": "8d45196a0c2711f1f4b821c78b8290d1105ba0d2f152661f561bdc74753ffa78",
     "img/8cdf4d2e2df8326311ab.gif": "72afdd2fcad33e13db33af765a3fae9528315d78391684190dd23e40bd688852",
-    "CHANGELOG.md": "051c0d8e14be75f7a6c39816dc27e4687e3c8bc4c132e2fa1b396821682582e4",
+    "CHANGELOG.md": "605d06b0e0d71c50cc6d945072e46f066cd8cd6332e4cb050557bcf0a201bf96",
     "702.js.map": "fb7e5d55f9541263a3b455bc5a866183d934910768ec25e72038b8a635f85b2d",
     "75.js.map": "283265333ef6245c05fddfbb6e09c86c3e60658cb0f7780f230ea9a7377bcd25",
     "944c737f589d02ecf603.svg": "a0c8acbcf5685a8950ce1c67722579dc745585fb0d668ce965327955e5e829ff",
@@ -44,7 +44,7 @@ Hash: SHA512
     "755.js": "f18f3c7d2540d5b214d7de9c94024b31b3014f6be047206c851cbc14c1963c0b",
     "608.js": "85320bd009b6ad56b5483e7b16c23011150345980151e0f9a2f8990ba1b83ae3",
     "702.js": "c7da46d035f2c5191439fef6e10831e8c07d14a7fc0c2547f4d1ada81bb25fee",
-    "module.js.map": "96bb2ebcad3f503cf3137048979e2659715a40600b909f49d281a2069fac96e0",
+    "module.js.map": "48e22479d2348225e75a22d8894082f63f18f118575d09942c3fe6f196a9aa81",
     "373.js.map": "223f1a00a96a1a468132175dd460b2465f875cf884125b67ec5adb2a43c9f2d2",
     "shared/infrastructure/profile-metrics/profile-metrics.json": "0a3a345a365e72f4278d3a76d5739600483bed8f374ddc1c2af85029057b8d07",
     "755.js.map": "e8850a35b5051c5ed0aee03868ba94e95ff067c4d68809bf53848123d4654b08",
@@ -55,10 +55,10 @@ Hash: SHA512
 Version: OpenPGP.js v4.10.11
 Comment: https://openpgpjs.org
 
-wrkEARMKAAYFAmeqG/wAIQkQfk0ManCIZucWIQTzOyW2kQdOhGNlcPN+TQxq
-cIhm53FfAgkAyAQS+vUeQKCu8HBcy9RAgkkqj0b5y8sTS2JcumpbBVCevILA
-VKQ+0q7i0OUhKvctntGS/D0zL1OjRuBMXv5xFygCCQBRncxf7SVg5nNHDjKS
-59x7vB0DbC4GJBKEGlMw/g37kJGERUbkP5o7pcsmudrBf3mebh4e2rMQIUW8
-lLqM/ltDCQ==
-=KhCg
+wrkEARMKAAYFAmeslukAIQkQfk0ManCIZucWIQTzOyW2kQdOhGNlcPN+TQxq
+cIhm50HSAgkAudTzh5JHO2ho8l1mGawRZLDc+ZmQabzCo5+V/+X/5Z8cH8+i
+XbR2I0zVo9ipmNK5MHd/NsAFNkRzkJkpgv+6JSECCQEQrTzvZWe6W2Gqsp4H
+3tg4gYhK5iYu/CUFcxU6DJkC9Fptqwov1/2ZzY73XMSmGuOwvF2z7LlEdJQj
+9sF5d2Z8zg==
+=uasg
 -----END PGP SIGNATURE-----
