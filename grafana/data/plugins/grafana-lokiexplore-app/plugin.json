@@ -2,6 +2,11 @@
   "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
   "autoEnabled": true,
   "dependencies": {
+    "extensions": {
+      "exposedComponents": [
+        "grafana-adaptivelogs-app/temporary-exemptions/v1"
+      ]
+    },
     "grafanaDependency": "\u003e=11.3.0",
     "plugins": []
   },
@@ -42,11 +47,11 @@
       "name": "Grafana"
     },
     "build": {
-      "time": 1736862657830,
+      "time": 1739381355747,
       "repo": "https://github.com/grafana/explore-logs",
       "branch": "main",
-      "hash": "f55d10b2dda28eb27687b6d831a1fbacfda34a13",
-      "build": 1541
+      "hash": "133261972c66fc4f132945d591bf33dc0445b9b0",
+      "build": 1758
     },
     "description": "Query-less exploration of log data stored in Loki",
     "keywords": [
@@ -83,8 +88,8 @@
         "path": "img/table.png"
       }
     ],
-    "updated": "2025-01-14",
-    "version": "1.0.6"
+    "updated": "2025-02-12",
+    "version": "1.0.7"
   },
   "name": "Explore Logs",
   "preload": true,
