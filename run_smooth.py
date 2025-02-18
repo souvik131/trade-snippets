@@ -253,6 +253,20 @@ custom_css = """
 
 # JavaScript to refresh the page with a random GET parameter
 custom_js = """
+<!-- Google tag (gtag.js) -->
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-H0X43Q7YFV"
+    ></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+
+      gtag("config", "G-H0X43Q7YFV");
+    </script>
 <script>
     function refreshPage() {
         let rand = Math.floor(Math.random() * 1000000);  // Generate a random number

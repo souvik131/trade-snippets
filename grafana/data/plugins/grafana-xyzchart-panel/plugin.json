@@ -1,0 +1,66 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grafana/grafana/master/docs/sources/developers/plugins/plugin.schema.json",
+  "dependencies": {
+    "grafanaDependency": "\u003e=7.0.0",
+    "plugins": []
+  },
+  "id": "grafana-xyzchart-panel",
+  "info": {
+    "author": {
+      "name": "Grafana Labs",
+      "url": "https://grafana.com"
+    },
+    "build": {
+      "time": 1684300725907,
+      "repo": "https://github.com/grafana/xyz-chart",
+      "branch": "main",
+      "hash": "40a014556ec96996cce8f0bce3f53acca7732bec",
+      "build": 31
+    },
+    "description": "XYZ chart",
+    "keywords": [
+      "panel"
+    ],
+    "links": [
+      {
+        "name": "Website",
+        "url": "https://github.com/grafana/xyz-chart"
+      },
+      {
+        "name": "License",
+        "url": "https://github.com/grafana/xyz-chart/blob/master/LICENSE"
+      }
+    ],
+    "logos": {
+      "large": "img/icn-xychart.svg",
+      "small": "img/icn-xychart.svg"
+    },
+    "screenshots": [
+      {
+        "name": "XYZ Chart 1",
+        "path": "img/chart-one.png"
+      },
+      {
+        "name": "XYZ Chart 2",
+        "path": "img/chart-two.png"
+      },
+      {
+        "name": "Edit chart",
+        "path": "img/edit-chart.png"
+      },
+      {
+        "name": "Hover over datapoints",
+        "path": "img/hover-over-datapoints.png"
+      },
+      {
+        "name": "Zoom in",
+        "path": "img/zoom-in.png"
+      }
+    ],
+    "updated": "2023-05-17",
+    "version": "0.1.0"
+  },
+  "name": "XYZ Chart",
+  "state": "beta",
+  "type": "panel"
+}

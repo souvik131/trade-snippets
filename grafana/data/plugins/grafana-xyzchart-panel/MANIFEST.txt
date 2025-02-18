@@ -1,0 +1,45 @@
+
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+{
+  "manifestVersion": "2.0.0",
+  "signatureType": "grafana",
+  "signedByOrg": "grafana",
+  "signedByOrgName": "Grafana Labs",
+  "plugin": "grafana-xyzchart-panel",
+  "version": "0.1.0",
+  "time": 1684300726679,
+  "keyId": "7e4d0c6a708866e7",
+  "files": {
+    "290.js": "2f4193d4decc8fa08e5746cf61c9ab690b45c041dbc6d302068c9188e9e62fe9",
+    "290.js.LICENSE.txt": "84223eecad70de3ece1390cfc3e15a134abe79d5e576e2023b0dc52b23a138b3",
+    "290.js.map": "5a2fe64ebaf745ba4a458faa48364ab7c59c13c144aad7a7f9dc58a8a15db3d6",
+    "723.js": "034108b44d031f7bc228b03b4375b2777bef00f791849aaad2b0ba8f56d23a9d",
+    "723.js.map": "2f0e0f296c1f744b920e44372aa235264e58b8269eb34da8fede3e06dd9eca2b",
+    "CHANGELOG.md": "cedc22840ed363a2f743a74dc2697568f6127089f55de58b7f4eefecf1635dc9",
+    "LICENSE": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1",
+    "README.md": "cbd0e4d85e1c5a42262ea3e4df2f819c65c7e93ccf96de18172e858a8651bad4",
+    "img/chart-one.png": "4eb4e157a90cffd0832316d6b159edeb2cac6e4bd81d58beffc2bc8111d46a56",
+    "img/chart-two.png": "11459fc3d55ec8c4dbc2617dc64083b50eab15ab7869978473d385b1d3487ff6",
+    "img/dot.png": "0dfa40e03a3d4005952dee621e09a302ed3458b2ccdb91e74e93b817b8d39160",
+    "img/edit-chart.png": "378954a0a900139270c873ee7f1a1193efc428121027c1b8570c7c6f582c9166",
+    "img/hover-over-datapoints.png": "96f393969af3c827f5ea524290e2f465a2e34d8682637cbd42358e64fb3f8243",
+    "img/icn-xychart.svg": "93f04cc59fd82fafd2b2e6ba74a8800846c57a29758b40725e19760bf5bcf502",
+    "img/zoom-in.png": "293e40e252a78a5b43a63a720f206b88df2fdf3c658304a694d4e3ee3d1bdb18",
+    "module.js": "c77fd5246bfa0b44995a7ab815d9cf6035daf6796a179abb5d29635ba92531c9",
+    "module.js.map": "9029704dc5c1284f2fb427ed69cf9175f6a61d948bd4d619a2f6fa87d9f2b584",
+    "plugin.json": "4f7d13171ed58c7c3459cb6d85bf03727336109bd8ec38c7880a365001da52be"
+  }
+}
+-----BEGIN PGP SIGNATURE-----
+Version: OpenPGP.js v4.10.10
+Comment: https://openpgpjs.org
+
+wrcEARMKAAYFAmRkY7YAIQkQfk0ManCIZucWIQTzOyW2kQdOhGNlcPN+TQxq
+cIhm5zVTAgi3qvNX3SMB5gI5/pT2N11d6R9m4iI/z16AMSmrldlk8SaD8wOn
+KfIsplj8/01z93PMjc6gCo20fkNHkRxnOVWMlgIGLkMUHZvmZjk+oy1PSbMx
+UCzvA2rV04IKtJcpD3k6W/dZkTOuaKK1XgdsT11FJMRV0gf7keNbytzVXfe3
+z3ue+D4=
+=iMQ9
+-----END PGP SIGNATURE-----
