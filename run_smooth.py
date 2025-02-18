@@ -8,6 +8,7 @@ import boto3
 from botocore.client import Config
 import argparse
 import requests
+import random
 
 ACCESS_ID = 'DO00CG633YYFBY4NJFMW'
 SECRET_KEY = 'fESbgRQ/cWPPIR5R7Pa65nCH/QrPYDrsLCkBN1lPXM0'
@@ -237,18 +238,37 @@ fig.update_layout(
 # Show plot
 
 # Define custom inline CSS
+# Custom CSS
 custom_css = """
 <style>
-    body { background-color: black; color: white; font-family: Arial, sans-serif; }
+    body { background-color: black; color: white; font-family: Arial, sans-serif; text-align: center; }
     .plot-container { width: 100%; height: 100%; }
     .modebar { display: none; }  /* Hides the toolbar */
+    .refresh-button { 
+        background-color: #FF4500; color: white; border: none; padding: 10px 20px; 
+        font-size: 16px; cursor: pointer; margin-top: 20px; border-radius: 5px;
+    }
 </style>
 """
 
-# Save the figure as an interactive HTML file with injected CSS
+# JavaScript to refresh the page with a random GET parameter
+custom_js = """
+<script>
+    function refreshPage() {
+        let rand = Math.floor(Math.random() * 1000000);  // Generate a random number
+        window.location.href = window.location.pathname + "?nocache=" + rand;
+    }
+</script>
+"""
+
+# Refresh button HTML
+refresh_button_html = '<button class="refresh-button" onclick="refreshPage()">Refresh</button>'
+
+# Save the figure as an interactive HTML file with injected CSS, JS, and Refresh Button
 html_path = f'web/{index1}.html'
 with open(html_path, "w") as f:
-    f.write(custom_css + fig.to_html(full_html=False, include_plotlyjs="cdn"))
+    f.write(custom_css + custom_js + refresh_button_html + fig.to_html(full_html=False, include_plotlyjs="cdn"))
+
 
 # Initiate session
 client = boto3.client('s3',
