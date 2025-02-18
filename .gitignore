@@ -7,3 +7,4 @@ read.sh
 clickhouse/data
 csv
 py
+web/*
