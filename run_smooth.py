@@ -205,7 +205,7 @@ fig.add_trace(go.Scatter3d(
 
 # Set title with IST time range
 fig.update_layout(
-    title=f'3D Vol Surface Over Time for {index1} (Exp: {expiry1}) & {index2} (Exp: {expiry2})<br>'
+    title=f'3D Vol Surface Over Time for {index1} (Exp: {expiry1}) & {index2} (Exp: {expiry2}) (Updated every minute)<br>'
           f'Time Range (IST): {ts_start1_ist.strftime("%Y-%m-%d %H:%M")} - {ts_end1_ist.strftime("%Y-%m-%d %H:%M")} | '
           f'{ts_start2_ist.strftime("%Y-%m-%d %H:%M")} - {ts_end2_ist.strftime("%Y-%m-%d %H:%M")}',
     scene=dict(
