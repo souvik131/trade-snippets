@@ -15,7 +15,7 @@ SECRET_KEY = 'fESbgRQ/cWPPIR5R7Pa65nCH/QrPYDrsLCkBN1lPXM0'
 
 # ClickHouse connection details
 CLICKHOUSE_HOST = "127.0.0.1"
-CLICKHOUSE_PORT = 8124
+CLICKHOUSE_PORT = 8123
 CLICKHOUSE_DB = "default"
 parser = argparse.ArgumentParser(description="Name")
 parser.add_argument("name", type=str, help="Name")
