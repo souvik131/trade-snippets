@@ -46,14 +46,14 @@ def fetch_data(script, expiry,range=90):
     select script,expiry,least(cedelta,-pedelta) as delta,(-pedelta-cedelta ) as sum_otm_delta,greatest(ceiv,peiv) as iv, toFloat32(strike) as s,time from 
     (
     select last_value(delta) as cedelta,last_value(iv/100) as ceiv, strike,script,expiry,toStartOfMinute(timestamp) as time from
-    (select  strike,iv,delta as delta,script,expiry,instrument_type,timestamp from market_greeks_log where script='{script}' and expiry='{expiry}' and instrument_type='CE'  and iv>0 and iv<40000 and toDate(timestamp)=toDate(today())  order by timestamp )
+    (select  strike,iv,delta as delta,script,expiry,instrument_type,timestamp from market_greeks_log where script='{script}' and expiry='{expiry}' and instrument_type='CE'  and iv>0 and iv<40000 and  toDate(timestamp)=toDate(today())  order by timestamp )
     group by strike,script,expiry,time
     ) as cetable
 
     join 
     (
     select last_value(delta) as pedelta,last_value(iv/100) as peiv, strike,script,expiry,toStartOfMinute(timestamp) as time from
-    (select  strike,iv,delta as delta,script,expiry,instrument_type,timestamp from market_greeks_log where script='{script}' and expiry='{expiry}' and instrument_type='PE'  and iv>0 and iv<40000 and toDate(timestamp)=toDate(today())  order by timestamp )
+    (select  strike,iv,delta as delta,script,expiry,instrument_type,timestamp from market_greeks_log where script='{script}' and expiry='{expiry}' and instrument_type='PE'  and iv>0 and iv<40000  and toDate(timestamp)=toDate(today())  order by timestamp )
     group by strike,script,expiry,time
     ) as petable
 
@@ -69,7 +69,7 @@ def fetch_data(script, expiry,range=90):
     (
     select last_value(atm_strike/100) as atm, time from
     (
-    select atm_strike, toStartOfMinute(timestamp) as time from market_derived_options_log where toDate(timestamp)=toDate(today()) and expiry='{expiry}' and script='{script}' order by timestamp
+    select atm_strike, toStartOfMinute(timestamp) as time from market_derived_options_log where  toDate(timestamp)=toDate(today()) and expiry='{expiry}' and script='{script}' order by timestamp
     ) group by time
     ) as atmtable on atmtable.time=ivdeltatable.time
     """
@@ -152,14 +152,26 @@ fig = go.Figure()
 
 # Add first dataset's vol surface
 fig.add_trace(go.Surface(
-    z=Zi1_smooth, x=Xi1, y=Yi1, colorscale=color_theme_1, opacity=0.8,
-    name=f"{index1} Exp: {expiry1}", colorbar=dict(x=-0.2, title=f"{index1} IV")
+    z=Zi1_smooth, x=Xi1, y=Yi1, colorscale=color_theme_1, opacity=0.7,
+    showscale=True,
+   # contours=dict(
+   #     x=dict(show=True, color="yellow", width=3),  # Mesh lines along x-axis
+   #     y=dict(show=True, color="yellow", width=3),  # Mesh lines along y-axis
+   #     z=dict(show=True, color="yellow", width=3)   # Mesh lines along z-axis
+   # ),
+    name=f"{index1} {expiry1}", colorbar=dict(x=-0.2, title=f"{index1} {expiry1} IV")
 ))
 
 # Add second dataset's vol surface
 fig.add_trace(go.Surface(
     z=Zi2_smooth, x=Xi2, y=Yi2, colorscale=color_theme_2, opacity=0.7,
-    name=f"{index2} Exp: {expiry2}", colorbar=dict(x=1.2, title=f"{index2} IV")
+    showscale=True,
+   # contours=dict(
+   #     x=dict(show=True, color="white", width=3),  # Mesh lines along x-axis
+   #     y=dict(show=True, color="white", width=3),  # Mesh lines along y-axis
+   #     z=dict(show=True, color="white", width=3)   # Mesh lines along z-axis
+   # ),
+    name=f"{index2} {expiry2}", colorbar=dict(x=1.2, title=f"{index2} {expiry2} IV")
 ))
 
 # Add red Delta=0 line for first dataset
@@ -168,8 +180,8 @@ fig.add_trace(go.Scatter3d(
     y=np.zeros_like(time_at_delta_zero1),
     z=iv_at_min_iv1,
     mode='lines',
-    line=dict(color='blue', width=5),
-    name=f'{index1} Delta 0 IV'
+    line=dict(color='yellow', width=5),
+    name=f'{index1} {expiry1} Delta 0 IV'
 ))
 
 
@@ -180,8 +192,8 @@ fig.add_trace(go.Scatter3d(
     y=delta_at_min_iv2,  # Corresponding delta with lowest IV
     z=iv_at_min_iv2,
     mode='lines',
-    line=dict(color='red', width=5),
-    name='Min IV Delta Line'
+    line=dict(color='white', width=5),
+    name=f'{index2} {expiry2} Min IV Delta Line'
 ))
 
 # Add a **blue line for the lowest IV over time**
@@ -190,8 +202,8 @@ fig.add_trace(go.Scatter3d(
     y=delta_at_min_iv1,  # Corresponding delta with lowest IV
     z=iv_at_min_iv1,
     mode='lines',
-    line=dict(color='blue', width=5),
-    name='Min IV Delta Line'
+    line=dict(color='yellow', width=5),
+    name=f'{index1} {expiry1} Min IV Delta Line'
 ))
 
 # Add blue Delta=0 line for second dataset
@@ -200,8 +212,8 @@ fig.add_trace(go.Scatter3d(
     y=np.zeros_like(time_at_delta_zero2),
     z=iv_at_delta_zero2,
     mode='lines',
-    line=dict(color='red', width=5),
-    name=f'{index2} Delta 0 IV'
+    line=dict(color='white', width=5),
+    name=f'{index2} {expiry2}  Delta 0 IV'
 ))
 
 # Set title with IST time range
